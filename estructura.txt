@@ -1,0 +1,27 @@
+/sistema-autenticacion/
+│
+├── /assets/                  # Recursos estáticos
+│   ├── /css/                 # Hojas de estilo
+│   └── /js/                  # JavaScript
+│
+├── /includes/                # Archivos incluidos en múltiples páginas
+│   ├── conexion.php          # Conexión a la base de datos
+│   ├── header.php            # Cabecera común
+│   ├── footer.php            # Pie de página común
+│   └── funciones.php         # Funciones auxiliares
+│
+├── /procesos/                # Lógica de procesamiento
+│   ├── registrar.php         # Procesar registro
+│   ├── login.php             # Procesar inicio de sesión
+│   ├── recuperar-proceso.php # Procesar recuperación
+│   └── reset-proceso.php     # Procesar restablecimiento
+│
+├── /vistas/                  # Interfaces de usuario
+│   ├── registro.php          # Formulario de registro
+│   ├── login.php             # Formulario de login
+│   ├── recuperar.php         # Formulario recuperación
+│   ├── reset.php             # Formulario restablecimiento
+│   └── dashboard.php         # Área privada
+│
+├── index.php                 # Página principal (redirección)
+└── logout.php                # Cerrar sesión
