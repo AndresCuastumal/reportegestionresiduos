@@ -45,7 +45,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         $password_hash = password_hash($password, PASSWORD_DEFAULT);
         
         // Insertar nuevo usuario
-        $stmt = $conn->prepare("INSERT INTO usuarios (email, password) VALUES (:email, :password)");
+        $stmt = $conn->prepare("INSERT INTO usuarios (email, password, rol) VALUES (:email, :password, 'generador')");
         $stmt->bindParam(':email', $email);
         $stmt->bindParam(':password', $password_hash);
         $stmt->execute();

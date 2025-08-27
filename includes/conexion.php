@@ -2,7 +2,7 @@
 $host = 'localhost';
 $dbname = 'bdresiduos';
 $username = 'root';
-$password = '';
+$password = 'estadistica2025*-';
 
 try {
     $conn = new PDO("mysql:host=$host;dbname=$dbname", $username, $password);
