@@ -14,6 +14,8 @@ $anio = $_SESSION['anio_reportando'];
 try {
     // Procesar archivos
     function procesarArchivo($archivo, $directorio, $prefijo) {
+        global $generador_id, $anio;
+        
         if ($archivo['error'] !== UPLOAD_ERR_OK) return null;
         
         if (!is_dir($directorio)) mkdir($directorio, 0755, true);
@@ -36,6 +38,8 @@ try {
     $directorio = '../uploads/soportes_anuales/';
     $archivo_cronograma = procesarArchivo($_FILES['archivo_cronograma'], $directorio, 'cronograma_');
     $archivo_soportes = procesarArchivo($_FILES['archivo_soportes_capacitaciones'], $directorio, 'soportes_capacitaciones_');
+    $archivo_resultados_auditorias = procesarArchivo($_FILES['archivo_resultados_auditorias'], $directorio, 'resultados_auditorias_');
+    $archivo_plan_mejoramiento = procesarArchivo($_FILES['archivo_plan_mejoramiento'], $directorio, 'plan_mejoramiento_');
     
     // Convertir acciones a JSON
     $acciones = isset($_POST['acciones_preventivas']) ? 
@@ -45,8 +49,9 @@ try {
     $stmt = $conn->prepare("INSERT INTO reporte_anual_adicional 
         (generador_id, anio, num_capacitaciones_programadas, archivo_cronograma,
          num_capacitaciones_ejecutadas, archivo_soportes_capacitaciones,
-         tiene_accidentes, num_accidentes, acciones_preventivas, otra_accion_preventiva)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+         tiene_accidentes, num_accidentes, acciones_preventivas, otra_accion_preventiva,
+         num_auditorias, archivo_resultados_auditorias, archivo_plan_mejoramiento)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
     
     $stmt->execute([
         $generador_id, $anio,
@@ -57,15 +62,16 @@ try {
         $_POST['tiene_accidentes'],
         $_POST['num_accidentes'] ?? 0,
         $acciones,
-        $_POST['otra_accion_preventiva'] ?? null
+        $_POST['otra_accion_preventiva'] ?? null,
+        $_POST['num_auditorias'],
+        $archivo_resultados_auditorias,
+        $archivo_plan_mejoramiento
     ]);
     
-    // Limpiar sesión y redirigir
-    unset($_SESSION['generador_id_reportando']);
-    unset($_SESSION['anio_reportando']);
-    
-    $_SESSION['mensaje_exito'] = "¡Reporte completo guardado exitosamente!";
-    header("Location: ../vistas/listado_generadores_view.php");
+    // Mantener los datos de sesión y redirigir al formulario de contingencias
+    $_SESSION['mensaje_exito'] = "¡Información adicional guardada! Complete ahora el plan de contingencias.";
+    error_log("Redirigiendo a reporte_contingencias_view.php");
+    header("Location: ../vistas/reporte_contingencias_view.php?id=" . $generador_id);
     exit();
     
 } catch (Exception $e) {

@@ -25,7 +25,7 @@ $generador = $stmt->fetch(PDO::FETCH_ASSOC);
                 <div class="card-header bg-success text-white">
                     <h4 class="mb-0">
                         <i class="bi bi-clipboard-check"></i>
-                        Información Adicional - <?= htmlspecialchars($generador['nom_generador']) ?>
+                        Información sobre capacitaciones, accidentes laborales y auditorías - <?= htmlspecialchars($generador['nom_generador']) ?>
                     </h4>
                 </div>
                 <div class="card-body">
@@ -47,7 +47,7 @@ $generador = $stmt->fetch(PDO::FETCH_ASSOC);
                                 <div class="col-md-6">
                                     <div class="mb-3">
                                         <label class="form-label">
-                                            Número de capacitaciones programadas
+                                            Número de capacitaciones programadas sobre manejo de residuos
                                             <span class="text-danger">*</span>
                                         </label>
                                         <input type="number" class="form-control" 
@@ -72,7 +72,7 @@ $generador = $stmt->fetch(PDO::FETCH_ASSOC);
                                 <div class="col-md-6">
                                     <div class="mb-3">
                                         <label class="form-label">
-                                            Número de capacitaciones ejecutadas
+                                            Número de capacitaciones ejecutadas sobre manejo de residuos
                                             <span class="text-danger">*</span>
                                         </label>
                                         <input type="number" class="form-control" 
@@ -104,7 +104,7 @@ $generador = $stmt->fetch(PDO::FETCH_ASSOC);
                                 <div class="col-md-6">
                                     <div class="mb-3">
                                         <label class="form-label">
-                                            ¿Se han presentado accidentes?
+                                            ¿Se han presentado accidentes ocurridos por manejo de residuos?
                                             <span class="text-danger">*</span>
                                         </label>
                                         <select class="form-select" name="tiene_accidentes" id="tiene_accidentes" required>
@@ -116,7 +116,7 @@ $generador = $stmt->fetch(PDO::FETCH_ASSOC);
                                 <div class="col-md-6">
                                     <div class="mb-3" id="numero_accidentes_container" style="display: none;">
                                         <label class="form-label">
-                                            Número de accidentes
+                                            Número de accidentes ocurridos por manejo de residuos
                                             <span class="text-danger">*</span>
                                         </label>
                                         <input type="number" class="form-control" 
@@ -128,7 +128,7 @@ $generador = $stmt->fetch(PDO::FETCH_ASSOC);
                             
                             <div class="mb-3">
                                 <label class="form-label">
-                                    Acciones preventivas y/o correctivas
+                                    Acciones preventivas y/o correctivas sobre accidentes ocurridos por manejo de residuos
                                     <span class="text-danger">*</span>
                                 </label>
                                 <div class="border p-3 rounded">
@@ -181,13 +181,78 @@ $generador = $stmt->fetch(PDO::FETCH_ASSOC);
                             </div>
                         </div>
                         
+                        <!-- SECCIÓN AUDITORIAS -->
+                        <div class="mb-4">
+                            <h5 class="border-bottom pb-2 text-primary">
+                                <i class="bi bi-search"></i> Auditorías Internas
+                            </h5>
+                            <p class="text-muted mb-3">
+                                Recuerde que las auditorías internas son obligatorias según la normatividad vigente.
+                                Asegúrese de haber realizado al menos una auditoría interna sobre la gestión de residuos
+                                durante el año <?= $anio_actual ?>.
+                            </p>
+                            
+                            <div class="row mt-3">
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label class="form-label">
+                                            Número de auditorías internas realizadas sobre el manejo de residuos sólidos
+                                            <span class="text-danger">*</span>
+                                        </label>
+                                        <input type="number" class="form-control" 
+                                               name="num_auditorias" 
+                                               min="0" required>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label class="form-label">
+                                            Resultados de las auditorías (PDF)
+                                            <span class="text-danger">*</span>
+                                        </label>
+                                        <input type="file" class="form-control" 
+                                               name="archivo_resultados_auditorias" 
+                                               accept=".pdf" required>
+                                        <div class="form-text">Acta(s) de auditorías realizadas</div>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label class="form-label">
+                                            Acciones correctivas y de mejoramiento (PDF)
+                                            <span class="text-danger">*</span>
+                                        </label>
+                                        <input type="file" class="form-control" 
+                                               name="archivo_plan_mejoramiento" 
+                                               accept=".pdf" required>
+                                        <div class="form-text">Plan de mejoramiento para el año evaluado</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- SECCIÓN SOPORTE ALERTAS --> 
+                        <div class="alert alert-warning mt-4">
+                            <h6><i class="bi bi-exclamation-triangle"></i> Importante:</h6>
+                            <ul class="mb-0">
+                                <li>El PDF de <strong>Soportes de capacitaciones</strong> deben ser relacionados únicamente 
+                                con la temática de manejo de residuos</li>
+                                <li>Los archivos de auditoría deben corresponder a las realizadas durante el año <?= $anio_actual ?></li>
+                                <li>El estado de su reporte cambiará a "Pendiente de revisión"</li>
+                                <li>Recibirá una notificación cuando sea aprobado o rechazado</li>
+                            </ul>
+                        </div>
+                        
                         <div class="d-flex justify-content-between mt-4">
                             <a href="reporte_mensual_view.php?id=<?= $generador_id ?>" 
                                class="btn btn-secondary">
-                                <i class="bi bi-arrow-left"></i> Volver Atrás
+                                <i class="bi bi-arrow-left"></i> Volver
                             </a>
                             <button type="submit" class="btn btn-success">
-                                <i class="bi bi-check-circle"></i> Finalizar Reporte
+                                <i class="bi bi-check-circle"></i> Guardar reporte y continuar
                             </button>
                         </div>
                     </form>
