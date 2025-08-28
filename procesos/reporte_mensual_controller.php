@@ -62,15 +62,15 @@ class ReporteMensualController {
             
             // Eliminar reportes existentes para este año
             $stmt = $this->conn->prepare("DELETE FROM cantidad_x_mes 
-                                       WHERE id_generador = ? AND anio = ?");
+                                    WHERE id_generador = ? AND anio = ?");
             $stmt->execute([$generador_id, $datos['anio']]);
             
             // Insertar nuevos reportes
             foreach ($datos['meses'] as $id_mes => $total_kg) {
                 if (!empty($total_kg)) {
                     $stmt = $this->conn->prepare("INSERT INTO cantidad_x_mes 
-                                               (id_generador, id_mes, anio, total_kg) 
-                                               VALUES (?, ?, ?, ?)");
+                                            (id_generador, id_mes, anio, total_kg) 
+                                            VALUES (?, ?, ?, ?)");
                     $stmt->execute([$generador_id, $id_mes, $datos['anio'], $total_kg]);
                 }
             }
@@ -83,7 +83,9 @@ class ReporteMensualController {
             $this->actualizarCategoriaGenerador($generador_id, $datos['anio']);
             
             $this->conn->commit();
-            $_SESSION['mensaje_exito'] = "Reporte mensual y soporte guardados exitosamente!";
+            
+            // === CAMBIO IMPORTANTE: NO establecer mensaje de sesión aquí ===
+            // La redirección y mensajes los maneja el procesador externo
             return true;
             
         } catch (Exception $e) {
@@ -210,30 +212,5 @@ class ReporteMensualController {
             throw new Exception("Error al calcular categoría del generador");
         }
     }
-}
-
-// Uso del controlador
-if (isset($_GET['id'])) {
-    $generador_id = $_GET['id'];
-    $controller = new ReporteMensualController($conn);
-    $controller->verificarPermisos($generador_id);
-    
-    $generador = $controller->obtenerDatosGenerador($generador_id);
-    $anio_actual = date('Y', strtotime('-1 year')); // Año anterior
-    $reportes_existentes = $controller->obtenerReportesExistentes($generador_id, $anio_actual);
-    
-    if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-        try {
-            // ===== CAMBIO IMPORTANTE: Pasar $_FILES['soporte_pdf'] =====
-            $controller->procesarReporte($generador_id, $_POST, $_FILES['soporte_pdf']);
-            header("Location: listado_generadores_view.php");
-            exit();
-        } catch (Exception $e) {
-            $error = $e->getMessage();
-        }
-    }
-} else {
-    header("Location: listado_generadores_view.php");
-    exit();
 }
 ?>

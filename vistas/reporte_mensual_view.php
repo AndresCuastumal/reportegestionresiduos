@@ -1,5 +1,44 @@
 <?php
+require_once '../includes/conexion.php'; // Primero la conexión
 require_once '../procesos/reporte_mensual_controller.php';
+
+// Obtener datos del generador
+if (isset($_GET['id'])) {
+    $generador_id = $_GET['id'];
+    
+    // Verificar permisos de sesión
+    /*session_start();
+    if (!isset($_SESSION['usuario_id'])) {
+        header("Location: login.php");
+        exit();
+    }*/
+    
+    // Crear controlador y obtener datos
+    $controller = new ReporteMensualController($conn);
+    
+    // Verificar permisos
+    if ($_SESSION['usuario_rol'] !== 'admin') {
+        $stmt = $conn->prepare("SELECT COUNT(*) FROM usuario_generador 
+                               WHERE usuario_id = ? AND generador_id = ?");
+        $stmt->execute([$_SESSION['usuario_id'], $generador_id]);
+        $tiene_acceso = $stmt->fetchColumn();
+        
+        if (!$tiene_acceso) {
+            header("Location: acceso_denegado.php");
+            exit();
+        }
+    }
+    
+    // Obtener datos del generador
+    $generador = $controller->obtenerDatosGenerador($generador_id);
+    $anio_actual = date('Y', strtotime('-1 year'));
+    $reportes_existentes = $controller->obtenerReportesExistentes($generador_id, $anio_actual);
+    
+} else {
+    header("Location: listado_generadores_view.php");
+    exit();
+}
+
 include '../includes/header.php';
 ?>
 
@@ -14,11 +53,12 @@ include '../includes/header.php';
                     </h4>
                 </div>
                 <div class="card-body">
-                    <?php if (isset($error)): ?>
-                        <div class="alert alert-danger"><?= $error ?></div>
+                    <?php if (isset($_SESSION['error'])): ?>
+                        <div class="alert alert-danger"><?= $_SESSION['error'] ?></div>
+                        <?php unset($_SESSION['error']); ?>
                     <?php endif; ?>
                     
-                    <form method="POST" enctype="multipart/form-data">
+                    <form method="POST" enctype="multipart/form-data" action="../procesos/procesar_reporte_mensual.php?id=<?= $generador_id ?>">
                         <input type="hidden" name="anio" value="<?= $anio_actual ?>">
                         
                         <div class="mb-3">
@@ -66,7 +106,7 @@ include '../includes/header.php';
                                 </tbody>
                             </table>
                         </div>
-                        <!-- Agregar en el formulario, después de la tabla de meses -->
+                        
                         <div class="card mt-4">
                             <div class="card-header bg-info text-white">
                                 <h5 class="mb-0">
@@ -108,7 +148,6 @@ include '../includes/header.php';
                             </div>
                         </div>
 
-                        <!-- Actualizar el botón de submit -->
                         <div class="d-flex justify-content-between mt-4">
                             <a href="listado_generadores_view.php" class="btn btn-secondary">
                                 <i class="bi bi-arrow-left"></i> Volver
