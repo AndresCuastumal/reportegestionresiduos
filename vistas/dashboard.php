@@ -4,7 +4,7 @@ require_once '../includes/conexion.php'; // Archivo con la conexión a tu BD
 
 // Verificar si el usuario está logueado
 if (!isset($_SESSION['usuario_id'])) {
-    header("Location: login.php");
+    header("Location: login/login.php");
     exit();
 }
 
@@ -52,14 +52,14 @@ include '../includes/header.php'; // Incluye el encabezado HTML
             
             <!-- Botones principales -->
             <div class="d-flex justify-content-center gap-3 mt-4">
-                <?php if (in_array($rol, ['generador', 'admin'])): ?>
-                    <a href="listado_generadores_view.php" class="btn btn-info btn-lg">
+                <?php if (in_array($rol, ['generador'])): ?>
+                    <a href="generador/listado_generadores_view.php" class="btn btn-info btn-lg">
                         <i class="fas fa-building me-2"></i>Mis Establecimientos
                     </a>
                 <?php endif; ?>
                 
                 <?php if (in_array($rol, ['generador'])): ?>
-                    <a href="generador_view.php" class="btn btn-primary btn-lg">
+                    <a href="generador/generador_view.php" class="btn btn-primary btn-lg">
                         <i class="fas fa-plus-circle me-2"></i>Añadir Nuevo Generador
                     </a>
                 <?php endif; ?>
@@ -74,8 +74,8 @@ include '../includes/header.php'; // Incluye el encabezado HTML
                         <i class="fas fa-calendar-alt fa-3x mb-3 text-primary"></i>
                         <h5 class="card-title">Reporte Año <?= date('Y', strtotime('-1 year') ) ?></h5>
                         <p class="card-text">Ingrese la cantidad de residuos generados por cada mes para el año <?= date('Y', strtotime('-1 year') ) ?>.</p>
-                        <?php if (in_array($rol, ['generador', 'admin'])): ?>
-                            <a href="reporte_mensual_view.php" class="btn btn-sm btn-outline-primary mt-2">Acceder</a>
+                        <?php if (in_array($rol, ['generador'])): ?>
+                            <a href="generador/reporte_mensual_view.php" class="btn btn-sm btn-outline-primary mt-2">Acceder</a>
                         <?php endif; ?>
                     </div>
                 </div>
@@ -87,8 +87,8 @@ include '../includes/header.php'; // Incluye el encabezado HTML
                         <i class="fas fa-chart-bar fa-3x mb-3 text-success"></i>
                         <h5 class="card-title">Categorización Automática</h5>
                         <p class="card-text">El sistema calcula si su establecimiento es micro, pequeño, mediano o gran generador.</p>
-                        <?php if (in_array($rol, ['generador', 'admin'])): ?>
-                            <a href="categorizacion.php" class="btn btn-sm btn-outline-success mt-2">Ver categorías</a>
+                        <?php if (in_array($rol, ['admin'])): ?>
+                            <a href="verificacion_reportes_view.php" class="btn btn-sm btn-outline-success mt-2">Ver categorías</a>
                         <?php endif; ?>
                     </div>
                 </div>
@@ -100,7 +100,7 @@ include '../includes/header.php'; // Incluye el encabezado HTML
                         <i class="fas fa-file-pdf fa-3x mb-3 text-danger"></i>
                         <h5 class="card-title">Certificados</h5>
                         <p class="card-text">Descargue certificados oficiales una vez sus reportes sean aprobados.</p>
-                        <?php if (in_array($rol, ['generador', 'admin'])): ?>
+                        <?php if (in_array($rol, ['generador'])): ?>
                             <a href="certificados.php" class="btn btn-sm btn-outline-danger mt-2">Descargar</a>
                         <?php endif; ?>
                     </div>

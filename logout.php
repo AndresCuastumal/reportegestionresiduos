@@ -1,6 +1,6 @@
 <?php
 session_start();
 session_destroy();
-header("Location: vistas/login.php");
+header("Location: vistas/login/login.php");
 exit();
 ?>

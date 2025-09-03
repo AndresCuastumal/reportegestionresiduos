@@ -14,11 +14,11 @@
         </footer>
 
         <!-- Scripts globales -->
-        <script src="../assets/js/main.js"></script>
+        <script src="/reportegestionresiduos/assets/js/main.js"></script>
         
         <!-- Script específico para la página -->
         <?php if (isset($page_script)): ?>
-            <script src="../assets/js/<?php echo $page_script; ?>"></script>
+            <script src="/reportegestionresiduos/assets/js/<?php echo $page_script; ?>"></script>
         <?php endif; ?>
     </body>
 </html>
