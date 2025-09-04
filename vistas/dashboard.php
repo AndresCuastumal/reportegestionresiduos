@@ -45,9 +45,14 @@ include '../includes/header.php'; // Incluye el encabezado HTML
         <div class="hero-section text-center">
             <h1><i class="fas fa-biohazard me-2"></i>Sistema de Gestión de Residuos Peligrosos</h1>
             <p class="lead mt-3">
-                Plataforma de reporte según Resolución 591 de 2024. Registre mensualmente la cantidad de residuos 
-                generados por su establecimiento para determinar su categoría (micro, pequeño, mediano o gran generador) 
-                y cumplir con las normativas ambientales.
+                Plataforma de reporte según Resolución 591 de 2024. De acuerdo con la normatividad vigente, 
+                todos los generadores de residuos peligrosos deben reportar anualmente información relacionada con 
+                la gestión de estos residuos. Para ello se deben diligenciar tres formularios:
+            </p>
+            <p class="text-start">
+                <li>Reporte mensual de residuos peligrosos</li>
+                <li>Capacitaciones, accidentes y auditorías realizadas</li>
+                <li>Contingencias</li>
             </p>
             
             <!-- Botones principales -->
@@ -56,13 +61,7 @@ include '../includes/header.php'; // Incluye el encabezado HTML
                     <a href="generador/listado_generadores_view.php" class="btn btn-info btn-lg">
                         <i class="fas fa-building me-2"></i>Mis Establecimientos
                     </a>
-                <?php endif; ?>
-                
-                <?php if (in_array($rol, ['generador'])): ?>
-                    <a href="generador/generador_view.php" class="btn btn-primary btn-lg">
-                        <i class="fas fa-plus-circle me-2"></i>Añadir Nuevo Generador
-                    </a>
-                <?php endif; ?>
+                <?php endif; ?>               
             </div>
         </div>
 
@@ -73,7 +72,7 @@ include '../includes/header.php'; // Incluye el encabezado HTML
                     <div class="card-body text-center">
                         <i class="fas fa-calendar-alt fa-3x mb-3 text-primary"></i>
                         <h5 class="card-title">Reporte Año <?= date('Y', strtotime('-1 year') ) ?></h5>
-                        <p class="card-text">Ingrese la cantidad de residuos generados por cada mes para el año <?= date('Y', strtotime('-1 year') ) ?>.</p>
+                        <p class="card-text">Reporte de información relacionada a residuos peligrosos para el año <?= date('Y', strtotime('-1 year') ) ?>.</p>
                         <?php if (in_array($rol, ['generador'])): ?>
                             <a href="generador/reporte_mensual_view.php" class="btn btn-sm btn-outline-primary mt-2">Acceder</a>
                         <?php endif; ?>
@@ -85,10 +84,10 @@ include '../includes/header.php'; // Incluye el encabezado HTML
                 <div class="card h-100">
                     <div class="card-body text-center">
                         <i class="fas fa-chart-bar fa-3x mb-3 text-success"></i>
-                        <h5 class="card-title">Categorización Automática</h5>
-                        <p class="card-text">El sistema calcula si su establecimiento es micro, pequeño, mediano o gran generador.</p>
+                        <h5 class="card-title">Revisión Salud Ambiental</h5>
+                        <p class="card-text">Módulo de revisión y gestión de validación de la información reportada.</p>
                         <?php if (in_array($rol, ['admin'])): ?>
-                            <a href="verificacion_reportes_view.php" class="btn btn-sm btn-outline-success mt-2">Ver categorías</a>
+                            <a href="admin/listado_revisiones_view.php" class="btn btn-sm btn-outline-success mt-2">Revisión de reportes</a>
                         <?php endif; ?>
                     </div>
                 </div>

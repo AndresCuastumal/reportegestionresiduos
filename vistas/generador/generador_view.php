@@ -83,6 +83,11 @@ include '../../includes/header.php'; // Incluye el encabezado HTML
                                    value="<?= htmlspecialchars($generadorExistente['nom_generador'] ?? '') ?>" required>
                         </div>
                         <div class="col-md-6 mb-3">
+                            <label for="nit" class="form-label required-field">NIT</label>
+                            <input type="text" class="form-control" id="nit" name="nit" 
+                                   value="<?= htmlspecialchars($generadorExistente['nit'] ?? '') ?>" required>
+                        </div>
+                        <div class="col-md-6 mb-3">
                             <label for="tipo_sujeto" class="form-label required-field">Tipo</label>
                             <select class="form-select" id="tipo_sujeto" name="tipo_sujeto" required>
                                 <option value="">Seleccione...</option>

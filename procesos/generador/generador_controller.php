@@ -54,7 +54,8 @@ class GeneradorController {
             // Actualizar generador existente
             $stmt = $this->conn->prepare("UPDATE GENERADOR SET
                 periodo_reporte = ?, 
-                nom_generador = ?, 
+                nom_generador = ?,
+                nit = ?, 
                 tipo_sujeto = ?, 
                 dir_establecimiento = ?, 
                 tel_establecimiento = ?, 
@@ -65,6 +66,7 @@ class GeneradorController {
             $stmt->execute([
                 $_POST['periodo_reporte'],
                 $_POST['nom_generador'],
+                $_POST['nit'],
                 $_POST['tipo_sujeto'],
                 $_POST['dir_establecimiento'],
                 $_POST['tel_establecimiento'],
@@ -79,16 +81,18 @@ class GeneradorController {
             $stmt = $this->conn->prepare("INSERT INTO GENERADOR (
                 periodo_reporte, 
                 nom_generador, 
+                nit,
                 tipo_sujeto, 
                 dir_establecimiento, 
                 tel_establecimiento, 
                 nom_responsable, 
                 cargo_responsable
-            ) VALUES (?, ?, ?, ?, ?, ?, ?)");
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
             
             $stmt->execute([
                 $_POST['periodo_reporte'],
                 $_POST['nom_generador'],
+                $_POST['nit'],
                 $_POST['tipo_sujeto'],
                 $_POST['dir_establecimiento'],
                 $_POST['tel_establecimiento'],

@@ -1,5 +1,5 @@
 <?php
-require '../includes/conexion.php';
+require '../../includes/conexion.php';
 
 if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     $email = trim($_POST['email']);
@@ -26,7 +26,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     
     // Si hay errores, redirigir con mensajes
     if (!empty($errores)) {
-        header("Location: ../vistas/registro.php?error=" . urlencode(implode("<br>", $errores)));
+        header("Location: ../../vistas/login/registro.php?error=" . urlencode(implode("<br>", $errores)));
         exit();
     }
     
@@ -37,7 +37,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         $stmt->execute();
         
         if ($stmt->rowCount() > 0) {
-            header("Location: ../vistas/registro.php?error=" . urlencode("Este email ya está registrado"));
+            header("Location: ../../vistas/login/registro.php?error=" . urlencode("Este email ya está registrado"));
             exit();
         }
         
@@ -50,14 +50,14 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         $stmt->bindParam(':password', $password_hash);
         $stmt->execute();
         
-        header("Location: ../vistas/login.php?registro=exito");
+        header("Location: ../../vistas/login/login.php?registro=exito");
         exit();
     } catch(PDOException $e) {
-        header("Location: ../vistas/registro.php?error=" . urlencode("Error en el registro: " . $e->getMessage()));
+        header("Location: ../../vistas/login/registro.php?error=" . urlencode("Error en el registro: " . $e->getMessage()));
         exit();
     }
 } else {
-    header("Location: ../vistas/registro.php");
+    header("Location: ../../vistas/login/registro.php");
     exit();
 }
 ?>

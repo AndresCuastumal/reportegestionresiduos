@@ -1,6 +1,6 @@
 <?php
-require '../includes/conexion.php';
-include '../includes/header.php';
+require '../../includes/conexion.php';
+include '../../includes/header.php';
 
 if (isset($_GET['token'])) {
     $token = $_GET['token'];
@@ -42,7 +42,7 @@ if (isset($_GET['token'])) {
             $stmt->execute();
             
             echo "<div class='auth-container'><div class='auth-card'><h2 class='auth-title'>Contraseña actualizada</h2><div class='alert alert-success'>Contraseña actualizada con éxito.</div><div class='text-center'><a href='login.php' class='btn btn-primary'>Iniciar sesión</a></div></div></div>";
-            include '../includes/footer.php';
+            include '../../includes/footer.php';
             exit();
         }
     }
@@ -89,5 +89,5 @@ if (isset($_GET['token'])) {
     </div>
 </main>
 
-<script src="../assets/js/validacion-registro.js"></script>
-<?php include '../includes/footer.php'; ?>
+<script src="../../assets/js/validacion-registro.js"></script>
+<?php include '../../includes/footer.php'; ?>

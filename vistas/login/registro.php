@@ -1,11 +1,11 @@
-<?php include '../includes/header.php'; ?>
+<?php include '../../includes/header.php'; ?>
 <main class="auth-container">
     <div class="auth-card">
         <h2 class = "auth-title">Registro de usuario</h2>
     <?php if (isset($_GET['error'])): ?>
         <div class="alert alert-error"><?php echo htmlspecialchars($_GET['error']); ?></div>
     <?php endif; ?>
-        <form  class = "auth-form" id="registroForm" method="post" action="../procesos/registrar.php" onsubmit="return validarFormulario()">
+        <form  class = "auth-form" id="registroForm" method="post" action="../../procesos/login/registrar.php" onsubmit="return validarFormulario()">
             <div class = "form-group">
                 <label for="email">Correo electrónico:</label>
                 <input type="email" name="email" required placeholder="tu@mail.com">
@@ -31,5 +31,5 @@
 
 
 <!-- Incluir JavaScript externo -->
-<script src="../assets/js/validacion-registro.js"></script>
-<?php include '../includes/footer.php'; ?>
+<script src="../../assets/js/validacion-registro.js"></script>
+<?php include '../../includes/footer.php'; ?>

@@ -1,6 +1,6 @@
 <?php
-require '../includes/conexion.php';
-include '../includes/header.php';
+require '../../includes/conexion.php';
+include '../../includes/header.php';
 ?>
 
 <main class="auth-container">
@@ -15,7 +15,7 @@ include '../includes/header.php';
             <div class="alert alert-success"><?php echo htmlspecialchars($_GET['success']); ?></div>
         <?php endif; ?>
         
-        <form method="post" action="../procesos/recuperar-proceso.php">
+        <form method="post" action="../../procesos/login/procesar_recupera_psw.php">
             <div class="form-group">
                 <label for="email">Correo Electrónico:</label>
                 <input type="email" id="email" name="email" required placeholder="tu@mail.com">
@@ -28,4 +28,4 @@ include '../includes/header.php';
     </div>
 </main>
 
-<?php include '../includes/footer.php'; ?>
+<?php include '../../includes/footer.php'; ?>

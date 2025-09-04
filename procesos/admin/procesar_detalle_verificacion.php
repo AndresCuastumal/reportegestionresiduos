@@ -1,5 +1,5 @@
 <?php
-require_once '../includes/conexion.php';
+require_once '../../includes/conexion.php';
 
 // Verificar sesión y permisos de admin
 session_start();

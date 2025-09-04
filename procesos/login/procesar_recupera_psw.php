@@ -1,6 +1,6 @@
 <?php
-require '../includes/conexion.php';
-require '../includes/enviar_correo.php'; // Archivo con configuración de PHPMailer
+require '../../includes/conexion.php';
+require '../../includes/enviar_correo.php'; // Archivo con configuración de PHPMailer
 
 if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     $email = $_POST['email'];
@@ -24,7 +24,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             $stmt->execute();
             
             // Configurar y enviar el correo
-            $enlace = "http://localhost/reportegestionresiduos/vistas/reset.php?token=$token";
+            $enlace = "http://localhost/reportegestionresiduos/vistas/login/reset.php?token=$token";
             
             $mail = configurarMailer(); // Función definida en mailer.php
             $mail->addAddress($email);
@@ -33,20 +33,20 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             $mail->AltBody = "Haz clic en este enlace para restablecer tu contraseña: $enlace";
             
             if ($mail->send()) {
-                header("Location: ../vistas/recuperar.php?success=Se ha enviado un enlace de recuperación a tu correo.");
+                header("Location: ../../vistas/login/recuperar.php?success=Se ha enviado un enlace de recuperación a tu correo.");
             } else {
-                header("Location: ../vistas/recuperar.php?error=Error al enviar el correo. Por favor intenta nuevamente.");
+                header("Location: ../../vistas/login/recuperar.php?error=Error al enviar el correo. Por favor intenta nuevamente.");
             }
             exit();
         } else {
-            header("Location: ../vistas/recuperar.php?error=No existe una cuenta con ese email.");
+            header("Location: ../../vistas/login/recuperar.php?error=No existe una cuenta con ese email.");
             exit();
         }
     } catch (Exception $e) {
-        header("Location: ../vistas/recuperar.php?error=Ocurrió un error inesperado.");
+        header("Location: ../../vistas/login/recuperar.php?error=Ocurrió un error inesperado.");
         exit();
     }
 } else {
-    header("Location: ../vistas/recuperar.php");
+    header("Location: ../../vistas/login/recuperar.php");
     exit();
 }

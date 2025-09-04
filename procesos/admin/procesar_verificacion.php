@@ -1,12 +1,12 @@
 <?php
 session_start();
-require_once '../includes/conexion.php';
-require_once '../includes/enviar_correo.php';
-require_once '../includes/generar_certificado.php'; // Función para generar PDF
+require_once '../../includes/conexion.php';
+//require_once '../../includes/enviar_correo.php';
+require_once '../../includes/generar_certificado.php'; // Función para generar PDF
 
 // Verificar que el usuario es técnico
-if ($_SESSION['rol'] != 'tecnico') {
-    header("Location: ../vistas/listado_generadores_view.php");
+if ($_SESSION['rol'] != 'admin') {
+    header("Location: ../../vistas/admin/verificacion_reportes_view.php");
     exit();
 }
 
