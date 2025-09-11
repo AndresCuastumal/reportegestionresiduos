@@ -12,38 +12,61 @@ $generador_id = $_SESSION['generador_id_reportando'];
 $anio = $_SESSION['anio_reportando'];
 
 try {
-    // Procesar archivos
-    function procesarArchivo($archivo, $directorio, $prefijo) {
-        global $generador_id, $anio;
+    // Procesar archivos - SOLO si se subieron nuevos
+    function procesarArchivo($archivo, $directorio, $prefijo, $generador_id, $anio, $campo_existente) {
+        global $conn;
         
-        if ($archivo['error'] !== UPLOAD_ERR_OK) return null;
+        // Si no se subió archivo, mantener el existente
+        if ($archivo['error'] !== UPLOAD_ERR_OK) {
+            $stmt = $conn->prepare("SELECT $campo_existente FROM reporte_anual_adicional WHERE generador_id = ? AND anio = ?");
+            $stmt->execute([$generador_id, $anio]);
+            $existente = $stmt->fetch(PDO::FETCH_ASSOC);
+            return $existente[$campo_existente] ?? null;
+        }
         
         if (!is_dir($directorio)) mkdir($directorio, 0755, true);
         
-        $tipo = mime_content_type($archivo['tmp_name']);
-        if ($tipo !== 'application/pdf') throw new Exception("Solo se permiten PDF");
+        $tipo_archivo = mime_content_type($archivo['tmp_name']);
+        if ($tipo_archivo !== 'application/pdf') throw new Exception("Solo se permiten PDF");
         if ($archivo['size'] > 10 * 1024 * 1024) throw new Exception("Archivo muy grande");
         
         $extension = pathinfo($archivo['name'], PATHINFO_EXTENSION);
-        $nombre = $prefijo . $generador_id . '_' . $anio . '_' . time() . '.' . $extension;
-        $ruta = $directorio . $nombre;
+        $nombre_archivo = $prefijo . $generador_id . '_' . $anio . '_' . time() . '.' . $extension;
+        $ruta_completa = $directorio . $nombre_archivo;
         
-        if (!move_uploaded_file($archivo['tmp_name'], $ruta)) {
+        if (!move_uploaded_file($archivo['tmp_name'], $ruta_completa)) {
             throw new Exception("Error al guardar archivo");
         }
         
-        return $nombre;
+        return $nombre_archivo;
     }
     
     $directorio = '../uploads/soportes_anuales/';
-    $archivo_cronograma = procesarArchivo($_FILES['archivo_cronograma'], $directorio, 'cronograma_');
-    $archivo_soportes = procesarArchivo($_FILES['archivo_soportes_capacitaciones'], $directorio, 'soportes_capacitaciones_');
-    $archivo_resultados_auditorias = procesarArchivo($_FILES['archivo_resultados_auditorias'], $directorio, 'resultados_auditorias_');
-    $archivo_plan_mejoramiento = procesarArchivo($_FILES['archivo_plan_mejoramiento'], $directorio, 'plan_mejoramiento_');
+    $archivo_cronograma = procesarArchivo($_FILES['archivo_cronograma'], $directorio, 'cronograma_', $generador_id, $anio, 'archivo_cronograma');
+    $archivo_soportes = procesarArchivo($_FILES['archivo_soportes_capacitaciones'], $directorio, 'soportes_capacitaciones_', $generador_id, $anio, 'archivo_soportes_capacitaciones');
+    $archivo_resultados_auditorias = procesarArchivo($_FILES['archivo_resultados_auditorias'], $directorio, 'resultados_auditorias_', $generador_id, $anio, 'archivo_resultados_auditorias');
+    $archivo_plan_mejoramiento = procesarArchivo($_FILES['archivo_plan_mejoramiento'], $directorio, 'plan_mejoramiento_', $generador_id, $anio, 'archivo_plan_mejoramiento');
     
-    // Convertir acciones a JSON
-    $acciones = isset($_POST['acciones_preventivas']) ? 
-        json_encode($_POST['acciones_preventivas']) : '[]';
+    // Convertir acciones a JSON - MANEJO CORRECTO DE CHECKBOXES
+    $acciones_preventivas = isset($_POST['acciones_preventivas']) ? $_POST['acciones_preventivas'] : [];
+    $acciones_json = !empty($acciones_preventivas) ? json_encode($acciones_preventivas) : '[]';
+    
+    // Obtener valores de campos opcionales
+    $num_accidentes = isset($_POST['num_accidentes']) ? $_POST['num_accidentes'] : 0;
+    $otra_accion_preventiva = isset($_POST['otra_accion_preventiva']) ? trim($_POST['otra_accion_preventiva']) : null;
+    
+    // Si se seleccionó "otra" pero no se especificó, mantener el valor existente
+    if (in_array('otra', $acciones_preventivas) && empty($otra_accion_preventiva)) {
+        $stmt_existente = $conn->prepare("SELECT otra_accion_preventiva FROM reporte_anual_adicional WHERE generador_id = ? AND anio = ?");
+        $stmt_existente->execute([$generador_id, $anio]);
+        $existente = $stmt_existente->fetch(PDO::FETCH_ASSOC);
+        $otra_accion_preventiva = $existente['otra_accion_preventiva'] ?? null;
+    }
+    
+    // Si no se seleccionó "otra", limpiar el campo
+    if (!in_array('otra', $acciones_preventivas)) {
+        $otra_accion_preventiva = null;
+    }
     
     // Verificar si ya existe un registro para este generador y año
     $stmt_check = $conn->prepare("SELECT id FROM reporte_anual_adicional WHERE generador_id = ? AND anio = ?");
@@ -73,9 +96,9 @@ try {
             $_POST['num_capacitaciones_ejecutadas'],
             $archivo_soportes,
             $_POST['tiene_accidentes'],
-            $_POST['num_accidentes'] ?? 0,
-            $acciones,
-            $_POST['otra_accion_preventiva'] ?? null,
+            $num_accidentes,
+            $acciones_json,
+            $otra_accion_preventiva,
             $_POST['num_auditorias'],
             $archivo_resultados_auditorias,
             $archivo_plan_mejoramiento,
@@ -100,9 +123,9 @@ try {
             $_POST['num_capacitaciones_ejecutadas'],
             $archivo_soportes,
             $_POST['tiene_accidentes'],
-            $_POST['num_accidentes'] ?? 0,
-            $acciones,
-            $_POST['otra_accion_preventiva'] ?? null,
+            $num_accidentes,
+            $acciones_json,
+            $otra_accion_preventiva,
             $_POST['num_auditorias'],
             $archivo_resultados_auditorias,
             $archivo_plan_mejoramiento

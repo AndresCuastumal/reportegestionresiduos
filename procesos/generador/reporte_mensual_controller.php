@@ -1,5 +1,5 @@
 <?php
-session_start();
+//session_start();
 require_once '../../includes/conexion.php';
 
 class ReporteMensualController {
@@ -9,11 +9,10 @@ class ReporteMensualController {
         $this->conn = $conn;
     }
     
-    // === MÉTODO QUE FALTABA ===
+    // === MÉTODO MODIFICADO: Sin redirecciones ===
     public function verificarPermisos($generador_id) {
         if (!isset($_SESSION['usuario_id'])) {
-            header("Location: ../../vistas/login/login.php");
-            exit();
+            throw new Exception("No autenticado");
         }
         
         // Verificar que el usuario tiene acceso a este generador
@@ -24,20 +23,20 @@ class ReporteMensualController {
             $tiene_acceso = $stmt->fetchColumn();
             
             if (!$tiene_acceso) {
-                header("Location: ../../vistas/login/acceso_denegado.php");
-                exit();
+                throw new Exception("Acceso denegado a este generador");
             }
         }
+        
+        return true;
     }
     
-    // === MÉTODO QUE FALTABA ===
+    // Los demás métodos se mantienen igual...
     public function obtenerDatosGenerador($generador_id) {
         $stmt = $this->conn->prepare("SELECT * FROM generador WHERE id = ?");
         $stmt->execute([$generador_id]);
         return $stmt->fetch(PDO::FETCH_ASSOC);
     }
     
-    // === MÉTODO QUE FALTABA ===
     public function obtenerReportesExistentes($generador_id, $anio) {
         $stmt = $this->conn->prepare("SELECT cm.*, m.nombre as mes_nombre 
                                    FROM cantidad_x_mes cm 
@@ -48,17 +47,27 @@ class ReporteMensualController {
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
     
-    public function procesarReporte($generador_id, $datos, $archivo) {
+    public function procesarReporte($generador_id, $datos, $archivo = null) {
         try {
+            // Verificar permisos antes de procesar
+            $this->verificarPermisos($generador_id);
+            
             $this->conn->beginTransaction();
             
-            // ===== PROCESAR ARCHIVO PDF =====
+            // ===== PROCESAR ARCHIVO PDF SOLO SI SE SUBIÓ UNO NUEVO =====
             $nombre_archivo = null;
             
-            if ($archivo['error'] === UPLOAD_ERR_OK) {
+            if ($archivo && $archivo['error'] === UPLOAD_ERR_OK) {
                 $nombre_archivo = $this->procesarArchivoPDF($archivo, $generador_id, $datos['anio']);
+            } else {
+                // Si no se subió archivo, mantener el existente
+                $stmt = $this->conn->prepare("SELECT soporte_pdf FROM revisiones_anuales 
+                                            WHERE generador_id = ? AND anio = ?");
+                $stmt->execute([$generador_id, $datos['anio']]);
+                $revision_existente = $stmt->fetch(PDO::FETCH_ASSOC);
+                $nombre_archivo = $revision_existente['soporte_pdf'] ?? null;
             }
-            // =======================================
+            // ===========================================================
             
             // Eliminar reportes existentes para este año
             $stmt = $this->conn->prepare("DELETE FROM cantidad_x_mes 
@@ -67,7 +76,7 @@ class ReporteMensualController {
             
             // Insertar nuevos reportes
             foreach ($datos['meses'] as $id_mes => $total_kg) {
-                if (!empty($total_kg)) {
+                if (!empty($total_kg) || $total_kg === '0') {
                     $stmt = $this->conn->prepare("INSERT INTO cantidad_x_mes 
                                             (id_generador, id_mes, anio, total_kg) 
                                             VALUES (?, ?, ?, ?)");
@@ -84,21 +93,22 @@ class ReporteMensualController {
             
             $this->conn->commit();
             
-            // === CAMBIO IMPORTANTE: NO establecer mensaje de sesión aquí ===
-            // La redirección y mensajes los maneja el procesador externo
             return true;
             
         } catch (Exception $e) {
-            $this->conn->rollBack();
+            if ($this->conn->inTransaction()) {
+                $this->conn->rollBack();
+            }
             
             // Eliminar archivo si se subió pero hubo error
-            if (isset($nombre_archivo) && file_exists('../uploads/soportes_anuales/' . $nombre_archivo)) {
+            if (isset($nombre_archivo) && $archivo && file_exists('../uploads/soportes_anuales/' . $nombre_archivo)) {
                 unlink('../uploads/soportes_anuales/' . $nombre_archivo);
             }
             
             throw new Exception("Error al guardar reporte: " . $e->getMessage());
         }
     }
+    
     
     // ===== MÉTODO: PROCESAR ARCHIVO PDF =====
     private function procesarArchivoPDF($archivo, $generador_id, $anio) {
@@ -137,18 +147,39 @@ class ReporteMensualController {
     
     // ===== MÉTODO: ACTUALIZAR REVISIÓN ANUAL =====
     private function actualizarRevisionAnual($generador_id, $anio, $nombre_archivo) {
-        $stmt = $this->conn->prepare("INSERT INTO revisiones_anuales 
-                                   (generador_id, anio, formulario_mensual, formulario_contingencias, formulario_accidentes, soporte_pdf, estado_general) 
-                                   VALUES (?, ?, 'pendiente', 'pendiente', 'pendiente', ?, 'pendiente')
-                                   ON DUPLICATE KEY UPDATE 
-                                   soporte_pdf = VALUES(soporte_pdf),
-                                   estado_general = 'pendiente',
-                                   observaciones_mensual = NULL,
-                                   observaciones_contingencias = NULL,
-                                   observaciones_accidentes = NULL,
-                                   fecha_revision = NULL,
-                                   revisado_por = NULL");
-        $stmt->execute([$generador_id, $anio, $nombre_archivo]);
+        // Verificar si ya existe una revisión
+        $stmt_check = $this->conn->prepare("SELECT soporte_pdf FROM revisiones_anuales 
+                                        WHERE generador_id = ? AND anio = ?");
+        $stmt_check->execute([$generador_id, $anio]);
+        $revision_existente = $stmt_check->fetch(PDO::FETCH_ASSOC);
+        
+        if ($revision_existente) {
+            // Actualizar registro existente
+            if ($nombre_archivo !== null) {
+                $stmt = $this->conn->prepare("UPDATE revisiones_anuales 
+                                        SET soporte_pdf = ?, estado_general = 'pendiente',
+                                            observaciones_mensual = NULL, observaciones_contingencias = NULL,
+                                            observaciones_accidentes = NULL, fecha_revision = NULL,
+                                            revisado_por = NULL
+                                        WHERE generador_id = ? AND anio = ?");
+                $stmt->execute([$nombre_archivo, $generador_id, $anio]);
+            } else {
+                // Si no hay nuevo archivo, mantener el existente y solo actualizar estado
+                $stmt = $this->conn->prepare("UPDATE revisiones_anuales 
+                                        SET estado_general = 'pendiente',
+                                            observaciones_mensual = NULL, observaciones_contingencias = NULL,
+                                            observaciones_accidentes = NULL, fecha_revision = NULL,
+                                            revisado_por = NULL
+                                        WHERE generador_id = ? AND anio = ?");
+                $stmt->execute([$generador_id, $anio]);
+            }
+        } else {
+            // Insertar nuevo registro
+            $stmt = $this->conn->prepare("INSERT INTO revisiones_anuales 
+                                    (generador_id, anio, formulario_mensual, soporte_pdf) 
+                                    VALUES (?, ?, 'pendiente', ?)");
+            $stmt->execute([$generador_id, $anio, $nombre_archivo]);
+        }
     }
     
     private function actualizarCategoriaGenerador($generador_id, $anio) {

@@ -13,55 +13,26 @@ $rol = $_SESSION['usuario_rol'];
 
 include '../includes/header.php'; // Incluye el encabezado HTML
 ?>
-
-<!DOCTYPE html>
-<html lang="es">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Reporte de Residuos Peligrosos</title>
-    <!-- Bootstrap CSS -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <!-- Font Awesome para íconos -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">    
-</head>
-<body>
-    <!-- Barra de navegación -->
-    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
-        <div class="container">
-            <a class="navbar-brand" href="#">
-                <i class="fas fa-biohazard me-2"></i>Secretaría de Salud - Pasto
-            </a>
-            <span class="navbar-text ms-auto">
-                <?php echo $_SESSION['usuario_email']; ?>
-                <a href="../logout.php" class="btn btn-sm btn-outline-light ms-3">Cerrar sesión</a>
-            </span>
-        </div>
-    </nav>
-
-    <!-- Contenido principal -->
-    <div class="container my-5">
         <!-- Sección hero con explicación -->
         <div class="hero-section text-center">
-            <h1><i class="fas fa-biohazard me-2"></i>Sistema de Gestión de Residuos Peligrosos</h1>
-            <p class="lead mt-3">
-                Plataforma de reporte según Resolución 591 de 2024. De acuerdo con la normatividad vigente, 
-                todos los generadores de residuos peligrosos deben reportar anualmente información relacionada con 
-                la gestión de estos residuos. Para ello se deben diligenciar tres formularios:
-            </p>
-            <p class="text-start">
-                <li>Reporte mensual de residuos peligrosos</li>
-                <li>Capacitaciones, accidentes y auditorías realizadas</li>
-                <li>Contingencias</li>
-            </p>
-            
-            <!-- Botones principales -->
-            <div class="d-flex justify-content-center gap-3 mt-4">
-                <?php if (in_array($rol, ['generador'])): ?>
-                    <a href="generador/listado_generadores_view.php" class="btn btn-info btn-lg">
-                        <i class="fas fa-building me-2"></i>Mis Establecimientos
-                    </a>
-                <?php endif; ?>               
+            <br>
+            <div class="hero-content  p-4 " style="background-color: #f8f4ceff;">
+                <p class="lead mt-1" style="text-align: justify; text-justify: inter-word;">
+                    Plataforma de reporte según Resolución 591 de 2024. De acuerdo con la normatividad vigente, 
+                    todos los generadores de residuos peligrosos deben reportar anualmente información relacionada con 
+                    la gestión de estos residuos. Para ello se deben diligenciar tres formularios:
+                </p>
+                <ul class="list-group list-group-flush mt-4">
+                    <li class="list-group-item border-0" style="background-color: #ebe5afff;">
+                        <i class="bi bi-file-earmark-spreadsheet me-2" style="color: #d97706;"></i>Reporte mensual de residuos peligrosos
+                    </li>
+                    <li class="list-group-item border-0" style="background-color: #f8f4ceff;">
+                        <i class="bi bi-mortarboard me-2" style="color: #059669;"></i>Capacitaciones, accidentes y auditorías realizadas
+                    </li>
+                    <li class="list-group-item border-0" style="background-color: #ebe5afff;">
+                        <i class="bi bi-exclamation-triangle me-2" style="color: #dc2626;"></i>Contingencias
+                    </li>
+                </ul>    
             </div>
         </div>
 
@@ -70,9 +41,9 @@ include '../includes/header.php'; // Incluye el encabezado HTML
             <div class="col-md-4 mb-4">
                 <div class="card h-100">
                     <div class="card-body text-center">
-                        <i class="fas fa-calendar-alt fa-3x mb-3 text-primary"></i>
+                        <i class="bi bi-calendar-check text-primary fs-1"></i>
                         <h5 class="card-title">Reporte Año <?= date('Y', strtotime('-1 year') ) ?></h5>
-                        <p class="card-text">Reporte de información relacionada a residuos peligrosos para el año <?= date('Y', strtotime('-1 year') ) ?>.</p>
+                        <p class="card-text">Módulo para reportar información relacionada con gestión de residuos peligrosos para el año <?= date('Y', strtotime('-1 year') ) ?>.</p>
                         <?php if (in_array($rol, ['generador'])): ?>
                             <a href="generador/reporte_mensual_view.php" class="btn btn-sm btn-outline-primary mt-2">Acceder</a>
                         <?php endif; ?>
@@ -83,7 +54,7 @@ include '../includes/header.php'; // Incluye el encabezado HTML
             <div class="col-md-4 mb-4">
                 <div class="card h-100">
                     <div class="card-body text-center">
-                        <i class="fas fa-chart-bar fa-3x mb-3 text-success"></i>
+                        <i class="bi bi-search fs-1 mb-3 text-success"></i>
                         <h5 class="card-title">Revisión Salud Ambiental</h5>
                         <p class="card-text">Módulo de revisión y gestión de validación de la información reportada.</p>
                         <?php if (in_array($rol, ['admin'])): ?>
@@ -96,7 +67,7 @@ include '../includes/header.php'; // Incluye el encabezado HTML
             <div class="col-md-4 mb-4">
                 <div class="card h-100">
                     <div class="card-body text-center">
-                        <i class="fas fa-file-pdf fa-3x mb-3 text-danger"></i>
+                        <i class="bi bi-file-pdf fs-1 mb-3 text-danger"></i>
                         <h5 class="card-title">Certificados</h5>
                         <p class="card-text">Descargue certificados oficiales una vez sus reportes sean aprobados.</p>
                         <?php if (in_array($rol, ['generador'])): ?>

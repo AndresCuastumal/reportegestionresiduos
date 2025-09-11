@@ -1,5 +1,5 @@
         </div> <!-- Cierre del div.container que abrimos en header.php -->
-        <footer class="site-footer">
+        <footer class="footer mt-5 py-3 bg-strong text-center">
             <div class="footer-content">
                 <p>Secretaría Municipal de Salud - Alcaldía de Pasto &copy; <?php echo date('Y'); ?> Todos los derechos reservados</p>
                 

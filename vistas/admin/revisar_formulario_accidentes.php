@@ -69,52 +69,86 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 include '../../includes/header.php';
 ?>
+<style>
 
-<div class="container my-5">
-    <div class="row">
-        <div class="col-md-10 mx-auto">
-            <div class="card">
-                <div class="card-header bg-primary text-white">
-                    <h4 class="mb-0">
-                        <i class="bi bi-clipboard-check"></i>
-                        Revisión - Capacitaciones, Accidentes y Auditorías
-                    </h4>
-                </div>
-                <div class="card-body">
-                    <!-- Información del generador -->
-                    <div class="row mb-4">
-                        <div class="col-md-6">
-                            <h5>Información del Generador</h5>
-                            <p><strong>Nombre:</strong> <?= htmlspecialchars($generador['nom_generador']) ?></p>
-                            <p><strong>NIT:</strong> <?= htmlspecialchars($generador['nit']) ?></p>
-                            <p><strong>Responsable:</strong> <?= htmlspecialchars($generador['nom_responsable']) ?></p>
-                        </div>
-                        <div class="col-md-6">
-                            <h5>Detalles de la Revisión</h5>
-                            <p><strong>Año:</strong> <?= $anio ?></p>
-                            <p><strong>Estado actual:</strong> 
-                                <span class="badge bg-<?= $revision['formulario_accidentes'] === 'aprobado' ? 'success' : ($revision['formulario_accidentes'] === 'rechazado' ? 'danger' : 'warning') ?>">
-                                    <?= ucfirst($revision['formulario_accidentes']) ?>
-                                </span>
-                            </p>
-                            <?php if ($revision['fecha_revision']): ?>
-                                <p><strong>Última revisión:</strong> <?= date('d/m/Y H:i', strtotime($revision['fecha_revision'])) ?></p>
-                                <p><strong>Por:</strong> <?= htmlspecialchars($revision['nombre_revisor']) ?></p>
-                            <?php endif; ?>
-                        </div>
+</style>
+    <!-- Contenedor principal -->
+    <div class="container my-4">
+        <!-- Breadcrumb -->
+        <nav aria-label="breadcrumb" class="mb-3">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="../dashboard.php">Dashboard</a></li>
+                <li class="breadcrumb-item"><a href="listado_revisiones_view.php">Revisiones</a></li>
+                <li class="breadcrumb-item active">Revisión - Capacitaciones y Accidentes</li>
+            </ol>
+        </nav>
+
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h2><i class="bi bi-clipboard-check me-2"></i>Revisión - Capacitaciones, Accidentes y Auditorías</h2>
+            <a href="listado_revisiones_view.php" class="btn btn-sm btn-outline-secondary">
+                <i class="bi bi-arrow-left me-2"></i>Volver
+            </a>
+        </div>
+
+        <!-- Tarjeta informativa -->
+        <div class="card mb-4" style="background-color: #f8f4ceff;">
+            <div class="card-body">
+                <p class="card-text" style="text-align: justify; text-justify: inter-word;">
+                    Revisión de capacitaciones, accidentes y auditorías relacionadas con la gestión de residuos peligrosos. 
+                    Verifique la información y determine el estado del formulario.
+                </p>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header bg-light">
+                <h5 class="mb-0"><i class="bi bi-info-circle me-2"></i>Información del Reporte</h5>
+            </div>
+            <div class="card-body">
+                <!-- Información del generador -->
+                <div class="row mb-4">
+                    <div class="col-md-6">
+                        <h6 class="text-muted">Información del Generador</h6>
+                        <p><strong>Nombre:</strong> <?= htmlspecialchars($generador['nom_generador']) ?></p>
+                        <p><strong>NIT:</strong> <?= htmlspecialchars($generador['nit']) ?></p>
+                        <p><strong>Responsable:</strong> <?= htmlspecialchars($generador['nom_responsable']) ?></p>
                     </div>
+                    <div class="col-md-6">
+                        <h6 class="text-muted">Detalles de la Revisión</h6>
+                        <p><strong>Año:</strong> <?= $anio ?></p>
+                        <p><strong>Estado actual:</strong> 
+                            <?php
+                            $clase_estado = '';
+                            switch ($revision['formulario_accidentes']) {
+                                case 'aprobado': $clase_estado = 'badge-estado-aprobado'; break;
+                                case 'rechazado': $clase_estado = 'badge-estado-rechazado'; break;
+                                case 'pendiente': $clase_estado = 'badge-estado-pendiente'; break;
+                                case 'sin_datos': $clase_estado = 'badge-estado-sin-datos'; break;
+                                default: $clase_estado = 'badge-estado-pendiente';
+                            }
+                            ?>
+                            <span class="badge-estado <?= $clase_estado ?>">
+                                <?= ucfirst($revision['formulario_accidentes']) ?>
+                            </span>
+                        </p>
+                        <?php if ($revision['fecha_revision']): ?>
+                            <p><strong>Última revisión:</strong> <?= date('d/m/Y H:i', strtotime($revision['fecha_revision'])) ?></p>                            
+                        <?php endif; ?>
+                    </div>
+                </div>
 
-                    <?php if ($datosReporte): ?>
-                    <!-- Datos de capacitaciones -->
-                    <h5 class="mb-3">Capacitaciones</h5>
-                    <div class="row mb-4">
+                <?php if ($datosReporte): ?>
+                <!-- Datos de capacitaciones -->
+                <div class="info-card">
+                    <h6><i class="bi bi-mortarboard me-2"></i>Capacitaciones</h6>
+                    <div class="row">
                         <div class="col-md-6">
                             <p><strong>Capacitaciones programadas:</strong> <?= $datosReporte['num_capacitaciones_programadas'] ?></p>
                             <?php if ($datosReporte['archivo_cronograma']): ?>
                             <p><strong>Cronograma:</strong> 
                                 <a href="../../procesos/uploads/soportes_anuales/<?= $datosReporte['archivo_cronograma'] ?>" 
-                                   target="_blank" class="btn btn-sm btn-outline-primary">
-                                    <i class="bi bi-download"></i> Ver archivo
+                                   target="_blank" class="btn btn-sm btn-outline btn-outline-primary">
+                                    <i class="bi bi-download me-2"></i>Ver archivo
                                 </a>
                             </p>
                             <?php endif; ?>
@@ -124,17 +158,19 @@ include '../../includes/header.php';
                             <?php if ($datosReporte['archivo_soportes_capacitaciones']): ?>
                             <p><strong>Soportes:</strong> 
                                 <a href="../../procesos/uploads/soportes_anuales/<?= $datosReporte['archivo_soportes_capacitaciones'] ?>" 
-                                   target="_blank" class="btn btn-sm btn-outline-primary">
-                                    <i class="bi bi-download"></i> Ver archivos
+                                   target="_blank" class="btn btn-sm btn-outline btn-outline-primary">
+                                    <i class="bi bi-download me-2"></i>Ver archivos
                                 </a>
                             </p>
                             <?php endif; ?>
                         </div>
                     </div>
+                </div>
 
-                    <!-- Datos de accidentes -->
-                    <h5 class="mb-3">Accidentes</h5>
-                    <div class="row mb-4">
+                <!-- Datos de accidentes -->
+                <div class="info-card">
+                    <h6><i class="bi bi-exclamation-triangle me-2"></i>Accidentes</h6>
+                    <div class="row">
                         <div class="col-md-6">
                             <p><strong>¿Tuvo accidentes?:</strong> <?= ucfirst($datosReporte['tiene_accidentes']) ?></p>
                             <?php if ($datosReporte['tiene_accidentes'] === 'si'): ?>
@@ -144,7 +180,7 @@ include '../../includes/header.php';
                         <div class="col-md-6">
                             <?php if (!empty($accionesPreventivas)): ?>
                             <p><strong>Acciones preventivas implementadas:</strong></p>
-                            <ul>
+                            <ul class="mb-0">
                                 <?php foreach ($accionesPreventivas as $accionKey): ?>
                                     <?php if (isset($listaAcciones[$accionKey])): ?>
                                     <li><?= $listaAcciones[$accionKey] ?></li>
@@ -154,21 +190,23 @@ include '../../includes/header.php';
                             <?php endif; ?>
                             
                             <?php if (!empty($datosReporte['otra_accion_preventiva'])): ?>
-                            <p><strong>Otra acción preventiva:</strong> <?= htmlspecialchars($datosReporte['otra_accion_preventiva']) ?></p>
+                            <p class="mt-2"><strong>Otra acción preventiva:</strong> <?= htmlspecialchars($datosReporte['otra_accion_preventiva']) ?></p>
                             <?php endif; ?>
                         </div>
                     </div>
+                </div>
 
-                    <!-- Datos de auditorías -->
-                    <h5 class="mb-3">Auditorías</h5>
-                    <div class="row mb-4">
+                <!-- Datos de auditorías -->
+                <div class="info-card">
+                    <h6><i class="bi bi-clipboard-data me-2"></i>Auditorías</h6>
+                    <div class="row">
                         <div class="col-md-6">
                             <p><strong>Número de auditorías:</strong> <?= $datosReporte['num_auditorias'] ?></p>
                             <?php if ($datosReporte['archivo_resultados_auditorias']): ?>
                             <p><strong>Resultados de auditorías:</strong> 
                                 <a href="../../procesos/uploads/soportes_anuales/<?= $datosReporte['archivo_resultados_auditorias'] ?>" 
-                                   target="_blank" class="btn btn-sm btn-outline-primary">
-                                    <i class="bi bi-download"></i> Ver archivo
+                                   target="_blank" class="btn btn-sm btn-outline btn-outline-primary">
+                                    <i class="bi bi-download me-2"></i>Ver archivo
                                 </a>
                             </p>
                             <?php endif; ?>
@@ -177,31 +215,63 @@ include '../../includes/header.php';
                             <?php if ($datosReporte['archivo_plan_mejoramiento']): ?>
                             <p><strong>Plan de mejoramiento:</strong> 
                                 <a href="../../procesos/uploads/soportes_anuales/<?= $datosReporte['archivo_plan_mejoramiento'] ?>" 
-                                   target="_blank" class="btn btn-sm btn-outline-primary">
-                                    <i class="bi bi-download"></i> Ver archivo
+                                   target="_blank" class="btn btn-sm btn-outline btn-outline-primary">
+                                    <i class="bi bi-download me-2"></i>Ver archivo
                                 </a>
                             </p>
                             <?php endif; ?>
                         </div>
                     </div>
+                </div>
 
-                    <?php else: ?>
-                    <div class="alert alert-warning">
-                        <i class="bi bi-exclamation-triangle"></i>
-                        No se ha encontrado información para este año.
-                    </div>
-                    <?php endif; ?>
+                <?php else: ?>
+                <div class="alert alert-warning">
+                    <i class="bi bi-exclamation-triangle me-2"></i>
+                    No se ha encontrado información para este año.
+                </div>
+                <?php endif; ?>
 
-                    <!-- Formulario de revisión -->
-                    <form method="POST" class="mt-4">
-                        <input type="hidden" name="generador_id" value="<?= $generador_id ?>">
-                        <input type="hidden" name="anio" value="<?= $anio ?>">
-                        
-                        <div class="card">
-                            <div class="card-header bg-info text-white">
-                                <h5 class="mb-0">Evaluación del Administrador</h5>
-                            </div>
-                            <div class="card-body">
+                <!-- Formulario de revisión -->
+                <form method="POST" class="mt-4">
+                    <input type="hidden" name="generador_id" value="<?= $generador_id ?>">
+                    <input type="hidden" name="anio" value="<?= $anio ?>">
+                    
+                    <div class="card">
+                        <div class="card-header bg-light">
+                            <h6 class="mb-0"><i class="bi bi-clipboard-check me-2"></i>Evaluación del Administrador</h6>
+                        </div>
+                        <div class="card-body">
+                            <?php if ($revision['formulario_accidentes'] === 'sin_datos'): ?>
+                                <!-- Mostrar mensaje cuando no hay datos -->
+                                <div class="alert alert-info">
+                                    <i class="bi bi-info-circle me-2"></i>
+                                    Este formulario no tiene datos registrados. No es posible realizar la revisión.
+                                </div>
+                                
+                                <!-- Campos deshabilitados -->
+                                <div class="mb-3">
+                                    <label class="form-label">Estado del formulario:</label>
+                                    <select name="estado" class="form-select" disabled>
+                                        <option value="sin_datos" selected>Sin datos</option>
+                                    </select>
+                                </div>
+
+                                <div class="mb-3">
+                                    <label class="form-label">Observaciones:</label>
+                                    <textarea name="observaciones" class="form-control" rows="4" 
+                                            placeholder="No se pueden agregar observaciones sin datos..." disabled></textarea>
+                                </div>
+
+                                <div class="d-flex justify-content-between">
+                                    <a href="listado_revisiones_view.php" class="btn btn-outline-secondary">
+                                        <i class="bi bi-arrow-left me-2"></i>Volver
+                                    </a>
+                                    <button type="button" class="btn btn-secondary" disabled>
+                                        <i class="bi bi-lock me-2"></i>Formulario Bloqueado
+                                    </button>
+                                </div>
+                            <?php else: ?>
+                                <!-- Formulario normal cuando hay datos -->
                                 <div class="mb-3">
                                     <label class="form-label">Estado del formulario:</label>
                                     <select name="estado" class="form-select" required>
@@ -214,24 +284,27 @@ include '../../includes/header.php';
                                 <div class="mb-3">
                                     <label class="form-label">Observaciones:</label>
                                     <textarea name="observaciones" class="form-control" rows="4" 
-                                              placeholder="Ingrese observaciones sobre la revisión..."><?= htmlspecialchars($revision['observaciones_accidentes'] ?? '') ?></textarea>
+                                            placeholder="Ingrese observaciones sobre la revisión..."><?= htmlspecialchars($revision['observaciones_accidentes'] ?? '') ?></textarea>
                                 </div>
 
                                 <div class="d-flex justify-content-between">
-                                    <a href="listado_revisiones_view.php" class="btn btn-secondary">
-                                        <i class="bi bi-arrow-left"></i> Volver
+                                    <a href="listado_revisiones_view.php" class="btn btn-outline-secondary">
+                                        <i class="bi bi-arrow-left me-2"></i>Volver
                                     </a>
                                     <button type="submit" class="btn btn-success">
-                                        <i class="bi bi-check-circle"></i> Guardar Revisión
+                                        <i class="bi bi-check-circle me-2"></i>Guardar Revisión
                                     </button>
                                 </div>
-                            </div>
+                            <?php endif; ?>
                         </div>
-                    </form>
-                </div>
+                    </div>
+                </form>
             </div>
         </div>
     </div>
-</div>
 
-<?php include '../../includes/footer.php'; ?>
+    <!-- Footer -->
+    <?php include '../../includes/footer.php'; ?>
+    
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>

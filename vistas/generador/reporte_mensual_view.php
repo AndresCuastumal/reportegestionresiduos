@@ -1,6 +1,13 @@
 <?php
-require_once '../../includes/conexion.php'; // Primero la conexión
+session_start();
+require_once '../../includes/conexion.php';
 require_once '../../procesos/generador/reporte_mensual_controller.php';
+
+// Verificar si viene de navegación interna entre formularios
+if (isset($_GET['id']) && !isset($_SESSION['generador_id_reportando'])) {
+    $_SESSION['generador_id_reportando'] = $_GET['id'];
+    $_SESSION['anio_reportando'] = date('Y', strtotime('-1 year'));
+}
 
 // Obtener datos del generador
 if (isset($_GET['id'])) {
@@ -18,7 +25,7 @@ if (isset($_GET['id'])) {
         
         if (!$tiene_acceso) {
             header("Location: acceso_denegado.php");
-            exit();
+            exit();             
         }
     }
     
@@ -27,6 +34,46 @@ if (isset($_GET['id'])) {
     $anio_actual = date('Y', strtotime('-1 year'));
     $reportes_existentes = $controller->obtenerReportesExistentes($generador_id, $anio_actual);
     
+    // Obtener información de revisión anual existente
+    $stmt = $conn->prepare("SELECT * FROM revisiones_anuales 
+                           WHERE generador_id = ? AND anio = ?");
+    $stmt->execute([$generador_id, $anio_actual]);
+    $revision_existente = $stmt->fetch(PDO::FETCH_ASSOC);
+    
+    // Verificar si las contingencias ya están confirmadas (bloqueadas)
+    $stmt_contingencias = $conn->prepare("SELECT estado FROM contingencias WHERE generador_id = ? AND anio = ?");
+    $stmt_contingencias->execute([$generador_id, $anio_actual]);
+    $contingencia = $stmt_contingencias->fetch(PDO::FETCH_ASSOC);
+    
+    $reporte_bloqueado = ($contingencia && $contingencia['estado'] == 'confirmado');
+    $readonly = $reporte_bloqueado ? 'readonly' : '';
+    $disabled = $reporte_bloqueado ? 'disabled' : '';
+    
+    // Verificar si los tres formularios están completos (pero en estado borrador)
+    $formularios_completos = false;
+    $menu_navegacion_activo = false;
+
+    if (!$reporte_bloqueado) {
+        // Verificar reporte mensual
+        $stmt_mensual_check = $conn->prepare("SELECT COUNT(*) as total FROM cantidad_x_mes WHERE id_generador = ? AND anio = ?");
+        $stmt_mensual_check->execute([$generador_id, $anio_actual]);
+        $reporte_mensual_check = $stmt_mensual_check->fetch(PDO::FETCH_ASSOC);
+        
+        // Verificar reporte adicional
+        $stmt_adicional = $conn->prepare("SELECT COUNT(*) as total FROM reporte_anual_adicional WHERE generador_id = ? AND anio = ?");
+        $stmt_adicional->execute([$generador_id, $anio_actual]);
+        $reporte_adicional = $stmt_adicional->fetch(PDO::FETCH_ASSOC);
+        
+        // Verificar contingencias
+        $stmt_contingencias_check = $conn->prepare("SELECT COUNT(*) as total FROM contingencias WHERE generador_id = ? AND anio = ?");
+        $stmt_contingencias_check->execute([$generador_id, $anio_actual]);
+        $contingencias_check = $stmt_contingencias_check->fetch(PDO::FETCH_ASSOC);
+        
+        // Considerar completos si existen registros en las tres tablas
+        $formularios_completos = ($reporte_mensual_check['total'] > 0 && $reporte_adicional['total'] > 0 && $contingencias_check['total'] > 0);
+        $menu_navegacion_activo = $formularios_completos;
+    }
+    
 } else {
     header("Location: listado_generadores_view.php");
     exit();
@@ -34,152 +81,207 @@ if (isset($_GET['id'])) {
 
 include '../../includes/header.php';
 ?>
+<?php
+// mensaje si el reporte ya fue enviado
+    if ($contingencia['estado']=='confirmado'): ?>
+        <div class="alert alert-warning text-center mb-0">
+            <i class="bi bi-exclamation-triangle me-2"></i>
+            <strong>El reporte anual para el año <?= $anio_actual ?> ya fue enviado y está en proceso de revisión.</strong>
+            No puede realizar modificaciones adicionales.
+        </div>    
+    <?php endif;
+?>
 
-<div class="container my-5">
-    <div class="row">
-        <div class="col-md-8 mx-auto">
-            <div class="card">
-                <div class="card-header bg-primary text-white">
-                    <h4 class="mb-0">
-                        <i class="bi bi-clipboard-data"></i>
-                        Reporte Mensual de Residuos - <?= htmlspecialchars($generador['nom_generador']) ?>
-                    </h4>
-                </div>
-                <div class="card-body">
-                    <?php if (isset($_SESSION['error'])): ?>
-                        <div class="alert alert-danger"><?= $_SESSION['error'] ?></div>
-                        <?php unset($_SESSION['error']); ?>
-                    <?php endif; ?>
-                    
-                    <form method="POST" enctype="multipart/form-data" action="../../procesos/generador/procesar_reporte_mensual.php?id=<?= $generador_id ?>">
-                        <input type="hidden" name="anio" value="<?= $anio_actual ?>">
-                        
-                        <div class="mb-3">
-                            <label class="form-label">Año de reporte:</label>
-                            <input type="number" class="form-control" value="<?= $anio_actual ?>" disabled>
-                            <small class="form-text text-muted">Sistema de reporte anual según Resolución 591 de 2024</small>
-                        </div>
-                        
-                        <div class="table-responsive">
-                            <table class="table table-striped">
-                                <thead class="table-dark">
-                                    <tr>
-                                        <th>Mes</th>
-                                        <th>Cantidad (kg)</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <?php
-                                    $meses = [
-                                        1 => 'Enero', 2 => 'Febrero', 3 => 'Marzo', 4 => 'Abril',
-                                        5 => 'Mayo', 6 => 'Junio', 7 => 'Julio', 8 => 'Agosto',
-                                        9 => 'Septiembre', 10 => 'Octubre', 11 => 'Noviembre', 12 => 'Diciembre'
-                                    ];
-                                    
-                                    foreach ($meses as $id_mes => $nombre_mes):
-                                        $valor_actual = '';
-                                        foreach ($reportes_existentes as $reporte) {
-                                            if ($reporte['id_mes'] == $id_mes) {
-                                                $valor_actual = $reporte['total_kg'];
-                                                break;
-                                            }
-                                        }
-                                    ?>
-                                    <tr>
-                                        <td><?= $nombre_mes ?></td>
-                                        <td>
-                                            <input type="number" step="0.01" min="0" 
-                                                   name="meses[<?= $id_mes ?>]" 
-                                                   value="<?= $valor_actual ?>"
-                                                   class="form-control" 
-                                                   placeholder="0.00">
-                                        </td>
-                                    </tr>
-                                    <?php endforeach; ?>
-                                </tbody>
-                            </table>
-                        </div>
-                        
-                        <div class="card mt-4">
-                            <div class="card-header bg-info text-white">
-                                <h5 class="mb-0">
-                                    <i class="bi bi-file-pdf"></i>
-                                    Soporte Documental Anual
-                                </h5>
-                            </div>
-                            <div class="card-body">
-                                <div class="mb-3">
-                                    <label for="soporte_pdf" class="form-label">
-                                        Cargar PDF con soportes de los 12 meses
-                                        <span class="text-danger">*</span>
-                                    </label>
-                                    <input type="file" class="form-control" id="soporte_pdf" name="soporte_pdf" 
-                                        accept=".pdf" required>
-                                    <div class="form-text">
-                                        Suba un solo archivo PDF que incluya todos los certificados, actas o soportes 
-                                        de la empresa recolectora para los 12 meses del año. Tamaño máximo: 10MB.
-                                    </div>
-                                </div>
+    <!-- Contenedor principal -->
+    <div class="container my-4">
+        <!-- Breadcrumb -->
+        <nav aria-label="breadcrumb" class="mb-3">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="../dashboard.php">Dashboard</a></li>
+                <li class="breadcrumb-item"><a href="listado_generadores_view.php">Mis Establecimientos</a></li>
+                
+                <?php if ($menu_navegacion_activo || $reporte_bloqueado): ?>
+                    <!-- Menú completo activo cuando los tres formularios están llenos -->
+                    <li class="breadcrumb-item active">Reporte Mensual</li>
+                    <li class="breadcrumb-item"><a href="reporte_adicional_view.php?id=<?= $generador_id ?>">Capacitaciones</a></li>
+                    <li class="breadcrumb-item"><a href="reporte_contingencias_view.php?id=<?= $generador_id ?>">Contingencias</a></li>
+                <?php else: ?>
+                    <!-- Menú simplificado cuando no están todos completos -->
+                    <li class="breadcrumb-item active">Reporte Mensual</li>
+                <?php endif; ?>
+            </ol>
+        </nav>
 
-                                <?php
-                                // Obtener revisión actual
-                                $stmt = $conn->prepare("SELECT soporte_pdf FROM revisiones_anuales 
-                                                    WHERE generador_id = ? AND anio = ?");
-                                $stmt->execute([$generador_id, $anio_actual]);
-                                $revision = $stmt->fetch(PDO::FETCH_ASSOC);
-                                ?>
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h2><i class="bi bi-clipboard-data me-2"></i>Reporte Mensual de Residuos</h2>
+            <a href="listado_generadores_view.php" class="btn btn-sm btn-outline-secondary">
+                <i class="bi bi-arrow-left me-2"></i>Volver
+            </a>
+        </div>
 
-                                <?php if (!empty($revision['soporte_pdf'])): ?>
-                                <div class="alert alert-info">
-                                    <strong>Soporte actual:</strong> 
-                                    <a href="../uploads/soportes_anuales/<?= $revision['soporte_pdf'] ?>" 
-                                    target="_blank" class="btn btn-sm btn-outline-primary ms-2">
-                                        <i class="bi bi-download"></i> Ver PDF actual
-                                    </a>
-                                </div>
-                                <?php endif; ?>                              
-                            </div>
-                        </div>
+        <!-- Mensaje informativo si ya existe información guardada -->
+        <?php if ($revision_existente and $contingencia['estado']=='borrador'): ?>
+        <div class="alert alert-info mb-4">
+            <i class="bi bi-info-circle-fill me-2"></i>
+            <strong>Información precargada:</strong> Se han encontrado datos guardados previamente para este año. 
+            Puede modificar los campos que necesite y guardar los cambios.
+        </div>
+        
 
-                        <div class="d-flex justify-content-between mt-4">
-                            <a href="listado_generadores_view.php" class="btn btn-secondary">
-                                <i class="bi bi-arrow-left"></i> Volver
-                            </a>
-                            <button type="submit" class="btn btn-success">
-                                <i class="bi bi-cloud-upload"></i> Guardar reporte y continuar
-                            </button>
-                        </div> 
-                    </form>
-                </div>
-            </div>
-            
-            <div class="mt-4">
-                <h5>Instrucciones:</h5>
-                <ul>
-                    <li>Ingrese la cantidad total de residuos peligrosos generados cada mes en kilogramos (kg)</li>
-                    <li>El sistema calculará automáticamente su categoría basado en el promedio móvil de los últimos 6 meses</li>
-                    <li><strong>Nuevos rangos:</strong>
-                        <ul>
-                            <li>Micro generador: &lt; 10 kg</li>
-                            <li>Pequeño generador: 10 - 99.99 kg</li>
-                            <li>Mediano generador: 100 - 999.99 kg</li>
-                            <li>Gran generador: ≥ 1000 kg</li>
-                        </ul>
-                    </li>
-                    <li>Puede dejar en blanco los meses sin generación de residuos</li>
-                </ul>
-            </div>
-            <div class="alert alert-warning mt-4">
-                <h6><i class="bi bi-exclamation-triangle"></i> Importante:</h6>
-                <ul class="mb-0">
-                    <li>El PDF debe incluir <strong>todos los soportes mensuales</strong> del año <?= $anio_actual ?></li>
-                    <li>El archivo será revisado por un administrador para validar la información</li>
-                    <li>El estado de su reporte cambiará a "Pendiente de revisión"</li>
-                    <li>Recibirá una notificación cuando sea aprobado o rechazado</li>
-                </ul>
+        <!-- Tarjeta informativa -->
+        <div class="card mb-4" style="background-color: #f8f4ceff;">
+            <div class="card-body">
+                <p class="card-text" style="text-align: justify; text-justify: inter-word;">
+                    Complete el reporte mensual de residuos peligrosos generados durante el año <?= $anio_actual ?>.
+                    Ingrese la cantidad en kilogramos (kg) para cada mes y adjunte el soporte documental correspondiente.
+                </p>
+                <p class="mb-0"><strong>Establecimiento:</strong> <?= htmlspecialchars($generador['nom_generador']) ?></p>
             </div>
         </div>
-    </div>
-</div>
+        <!-- Información adicional -->
+        <div class="info-card mt-4">
+            <h6><i class="bi bi-info-circle me-2"></i>Instrucciones y Categorías</h6>
+            <ul class="mb-3">
+                <li>Ingrese la cantidad total de residuos peligrosos generados cada mes en kilogramos (kg)</li>
+                <li>El sistema calculará automáticamente su categoría basado en el promedio móvil de los últimos 6 meses</li>
+                <li>Puede dejar en blanco los meses sin generación de residuos</li>
+            </ul>
+            
+            <h6 class="mt-3">Rangos de Categorización:</h6>
+            <div class="row">
+                <div class="col-md-3">
+                    <div class="border rounded p-2 text-center mb-2">
+                        <strong class="d-block">Micro generador</strong>
+                        <small class="text-muted">&lt; 10 kg</small>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="border rounded p-2 text-center mb-2">
+                        <strong class="d-block">Pequeño generador</strong>
+                        <small class="text-muted">10 - 99.99 kg</small>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="border rounded p-2 text-center mb-2">
+                        <strong class="d-block">Mediano generador</strong>
+                        <small class="text-muted">100 - 999.99 kg</small>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="border rounded p-2 text-center mb-2">
+                        <strong class="d-block">Gran generador</strong>
+                        <small class="text-muted">≥ 1000 kg</small>
+                    </div>
+                </div>
+            </div>
+        </div>
 
-<?php include '../../includes/footer.php'; ?>
+        <div class="alert alert-warning mt-4">
+            <h6><i class="bi bi-exclamation-triangle me-2"></i>Importante</h6>
+            <ul class="mb-0">
+                <li>El PDF debe incluir <strong>todos los soportes mensuales</strong> del año <?= $anio_actual ?></li>
+                <li>El archivo será revisado por un administrador para validar la información</li>
+                <li>El estado de su reporte cambiará de estado "Sin revisión" a "Pendiente"</li>
+                <li>Recibirá una notificación cuando sea aprobado o rechazado</li>
+            </ul>
+        </div>
+        <?php endif; ?>
+        
+        <div class="card">
+            <div class="card-header bg-light">
+                <h5 class="mb-0"><i class="bi bi-info-circle me-2"></i>Reporte Anual <?= $anio_actual ?></h5>
+            </div>
+            <div class="card-body">
+                <?php if (isset($_SESSION['error'])): ?>
+                    <div class="alert alert-danger">
+                        <i class="bi bi-exclamation-triangle me-2"></i><?= $_SESSION['error'] ?>
+                    </div>
+                    <?php unset($_SESSION['error']); ?>
+                <?php endif; ?>
+                
+                <form method="POST" enctype="multipart/form-data" action="../../procesos/generador/procesar_reporte_mensual.php?id=<?= $generador_id ?>">
+                    <input type="hidden" name="anio" value="<?= $anio_actual ?>">
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Año de reporte:</label>
+                        <input type="number" class="form-control" value="<?= $anio_actual ?>" disabled>
+                        <div class="form-text">Sistema de reporte anual según Resolución 591 de 2024</div>
+                    </div>
+                    
+                    <!-- Datos del reporte mensual en 2 columnas -->
+                    <h6 class="text-muted mb-3">Cantidad de Residuos por Mes (kg)</h6>
+                    <div class="meses-grid">
+                        <?php
+                        $meses = [
+                            1 => 'Enero', 2 => 'Febrero', 3 => 'Marzo', 4 => 'Abril',
+                            5 => 'Mayo', 6 => 'Junio', 7 => 'Julio', 8 => 'Agosto',
+                            9 => 'Septiembre', 10 => 'Octubre', 11 => 'Noviembre', 12 => 'Diciembre'
+                        ];
+                        
+                        foreach ($meses as $id_mes => $nombre_mes):
+                            $valor_actual = '';
+                            foreach ($reportes_existentes as $reporte) {
+                                if ($reporte['id_mes'] == $id_mes) {
+                                    $valor_actual = $reporte['total_kg'];
+                                    break;
+                                }
+                            }
+                        ?>
+                        <div class="mes-item">
+                            <span class="mes-nombre"><?= $nombre_mes ?></span>
+                            <input type="number" step="0.01" min="0" 
+                                   name="meses[<?= $id_mes ?>]" 
+                                   value="<?= $valor_actual ?>"
+                                   class="form-control form-control-sm mes-cantidad" 
+                                   placeholder="0.00" <?= $readonly ?>>
+                        </div>
+                        <?php endforeach; ?>
+                    </div>
+
+                    <!-- Soporte documental -->
+                    <div class="info-card mt-4">
+                        <h6><i class="bi bi-file-pdf me-2"></i>Soporte Documental Anual</h6>
+                        <div class="mb-3">
+                            <label for="soporte_pdf" class="form-label">
+                                Cargar PDF con soportes de los 12 meses
+                                <?php if (!$revision_existente): ?><span class="text-danger">*</span><?php endif; ?>
+                            </label>
+                            <input type="file" class="form-control" id="soporte_pdf" name="soporte_pdf" 
+                                accept=".pdf" <?= !$revision_existente ? 'required' : '' ?> <?= $disabled ?>>
+                            <div class="form-text">
+                                Suba un solo archivo PDF que incluya todos los certificados, actas o soportes 
+                                de la empresa recolectora para los 12 meses del año. Tamaño máximo: 10MB.
+                            </div>
+                            
+                            <?php if ($revision_existente && !empty($revision_existente['soporte_pdf'])): ?>
+                            <div class="form-text mt-2">
+                                <a href="../../procesos/uploads/soportes_anuales/<?= $revision_existente['soporte_pdf'] ?>" 
+                                   target="_blank" class="btn btn-sm btn-outline-primary">
+                                    <i class="bi bi-download me-1"></i>Ver PDF actual
+                                </a>
+                                <span class="ms-2 text-muted">Si no selecciona un nuevo archivo, se mantendrá el actual.</span>
+                            </div>
+                            <?php endif; ?>
+                        </div>                             
+                    </div>
+
+                    <div class="d-flex justify-content-between mt-4">
+                        <a href="listado_generadores_view.php" class="btn btn-outline btn-outline-secondary">
+                            <i class="bi bi-arrow-left me-2"></i>Volver
+                        </a>
+                        <?php  if($contingencia['estado']=='borrador'): ?>
+                        <button type="submit" class="btn btn-outline btn-outline-success">
+                            <i class="bi bi-cloud-upload me-2"></i><?= $revision_existente ? 'Actualizar' : 'Guardar' ?> Reporte
+                        </button>
+                        <?php endif; ?>
+                    </div> 
+                </form>
+            </div>
+        </div>       
+    </div>
+
+    <!-- Footer -->
+    <?php include '../../includes/footer.php'; ?>
+    
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>

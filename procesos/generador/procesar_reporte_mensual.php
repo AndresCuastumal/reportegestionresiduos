@@ -12,8 +12,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_GET['id'])) {
         $_SESSION['generador_id_reportando'] = $generador_id;
         $_SESSION['anio_reportando'] = $_POST['anio'];
         
+        // Verificar si se subió un archivo
+        $archivo_subido = false;
+        $nombre_archivo = null;
+        
+        if (isset($_FILES['soporte_pdf']) && $_FILES['soporte_pdf']['error'] === UPLOAD_ERR_OK) {
+            $archivo_subido = true;
+        }
+        
         // Procesar reporte mensual
-        $controller->procesarReporte($generador_id, $_POST, $_FILES['soporte_pdf']);
+        $controller->procesarReporte($generador_id, $_POST, $archivo_subido ? $_FILES['soporte_pdf'] : null);
                        
         // Redirigir al segundo formulario
         header("Location: ../../vistas/generador/reporte_adicional_view.php?id=" . $generador_id);

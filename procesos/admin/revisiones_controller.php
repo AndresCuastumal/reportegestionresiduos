@@ -9,7 +9,7 @@ class RevisionesController {
     // Obtener todas las revisiones pendientes
     public function obtenerRevisionesPendientes() {
         $stmt = $this->conn->prepare("
-            SELECT r.*, g.nom_generador, g.dir_establecimiento, g.tipo_sujeto, s.nom_tipo
+            SELECT r.*, g.nom_generador, g.nom_responsable, g.dir_establecimiento, g.tipo_sujeto, s.nom_tipo
             FROM revisiones_anuales r
             JOIN generador g ON r.generador_id = g.id
             JOIN tipo_generador s ON g.tipo_sujeto = s.id
@@ -131,7 +131,7 @@ class RevisionesController {
     // Obtener revisiones con filtros
     public function obtenerRevisionesConFiltros($tipo_sujeto = '', $estado_general = '') {
         $sql = "
-            SELECT r.*, g.nom_generador, g.tipo_sujeto, s.nom_tipo
+            SELECT r.*, g.nom_generador, g.nom_responsable, g.tipo_sujeto, s.nom_tipo
             FROM revisiones_anuales r
             JOIN generador g ON r.generador_id = g.id
             JOIN tipo_generador s ON g.tipo_sujeto = s.id
@@ -176,5 +176,44 @@ class RevisionesController {
         return $tipos;
     }
 
+    // Método para verificar si un formulario tiene datos
+    public function formularioTieneDatos($generador_id, $anio, $tipo_formulario) {
+        switch ($tipo_formulario) {
+            case 'mensual':
+                $tabla = 'cantidad_x_mes';
+                $stmt = $this->conn->prepare("
+                    SELECT COUNT(*) as total 
+                    FROM $tabla 
+                    WHERE id_generador = ? AND anio = ?
+                ");
+                break;
+                
+            case 'accidentes':
+                $tabla = 'reporte_anual_adicional';
+                $stmt = $this->conn->prepare("
+                    SELECT COUNT(*) as total 
+                    FROM $tabla 
+                    WHERE generador_id = ? AND anio = ?
+                ");
+                break;
+                
+            case 'contingencias':
+                $tabla = 'contingencias';
+                $stmt = $this->conn->prepare("
+                    SELECT COUNT(*) as total 
+                    FROM $tabla 
+                    WHERE generador_id = ? AND anio = ?
+                ");
+                break;
+                
+            default:
+                return false;
+        }
+        
+        $stmt->execute([$generador_id, $anio]);
+        $resultado = $stmt->fetch(PDO::FETCH_ASSOC);
+        
+        return $resultado['total'] > 0;
+    }
 }
 ?>

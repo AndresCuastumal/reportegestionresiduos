@@ -44,15 +44,17 @@ class GeneradoresController {
     }
 
     public function obtenerEstadosRevision() {
-        try {
-            $anio_actual = date('Y - 1'); // Revisiones del año anterior
+    try {
+            // CORRECCIÓN: Obtener el año anterior correctamente
+            $anio_anterior = date('Y') - 1;
+            error_log("Año anterior calculado: " . $anio_anterior);
             
             if ($_SESSION['usuario_rol'] === 'admin') {
                 // Admin: obtener estados de todos los generadores
-                $stmt = $this->conn->prepare("SELECT generador_id, estado 
+                $stmt = $this->conn->prepare("SELECT generador_id, estado_general AS estado 
                                         FROM revisiones_anuales 
                                         WHERE anio = ?");
-                $stmt->execute([$anio_actual]);
+                $stmt->execute([$anio_anterior]);
             } else {
                 // Usuario normal: solo sus generadores
                 $generadores_ids = array_column($this->generadores, 'id');
@@ -63,11 +65,11 @@ class GeneradoresController {
                 }
                 
                 $placeholders = implode(',', array_fill(0, count($generadores_ids), '?'));
-                $stmt = $this->conn->prepare("SELECT generador_id, estado 
+                $stmt = $this->conn->prepare("SELECT generador_id, estado_general AS estado 
                                         FROM revisiones_anuales 
                                         WHERE generador_id IN ($placeholders) AND anio = ?");
                 
-                $params = array_merge($generadores_ids, [$anio_actual]);
+                $params = array_merge($generadores_ids, [$anio_anterior]);
                 $stmt->execute($params);
             }
             
