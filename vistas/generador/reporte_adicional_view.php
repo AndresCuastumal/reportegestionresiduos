@@ -44,16 +44,18 @@ $generador = $stmt->fetch(PDO::FETCH_ASSOC);
 
 // Obtener información adicional existente si existe
 $info_adicional = null;
+$acciones_preventivas = []; // INICIALIZAR COMO ARRAY VACÍO
+
 $stmt_adicional = $conn->prepare("SELECT * FROM reporte_anual_adicional WHERE generador_id = ? AND anio = ?");
 $stmt_adicional->execute([$generador_id, $anio_actual]);
+
 if ($stmt_adicional->rowCount() > 0) {
     $info_adicional = $stmt_adicional->fetch(PDO::FETCH_ASSOC);
     
     // Decodificar las acciones preventivas si existen
     if (!empty($info_adicional['acciones_preventivas'])) {
-        $acciones_preventivas = json_decode($info_adicional['acciones_preventivas'], true);
-    } else {
-        $acciones_preventivas = [];
+        $decoded = json_decode($info_adicional['acciones_preventivas'], true);
+        $acciones_preventivas = is_array($decoded) ? $decoded : [];
     }
 }
 
@@ -92,13 +94,14 @@ if (!$reporte_bloqueado) {
 }
 ?>  <?php
 // mensaje si el reporte ya fue enviado
-    if ($contingencia['estado']=='confirmado'): ?>
+    if(isset($contingencia) && is_array($contingencia) && isset($contingencia['estado']) && $contingencia['estado']=='confirmado'): ?>
         <div class="alert alert-warning text-center mb-0">
             <i class="bi bi-exclamation-triangle me-2"></i>
             <strong>El reporte anual para el año <?= $anio_actual ?> ya fue enviado y está en proceso de revisión.</strong>
             No puede realizar modificaciones adicionales.
         </div>    
-    <?php endif; ?>
+    <?php endif;
+    ?>
     <!-- Contenedor principal -->
     <div class="container my-4">
         <!-- Breadcrumb -->
@@ -137,11 +140,13 @@ if (!$reporte_bloqueado) {
 
         <!-- Mensaje informativo si ya existe información guardada -->
         
+        <?php if ($info_adicional && !$reporte_bloqueado): ?>
         <div class="alert alert-info mb-4">
             <i class="bi bi-info-circle-fill me-2"></i>
             <strong>Información precargada:</strong> Se han encontrado datos guardados previamente para este año. 
             Puede modificar los campos que necesite y guardar los cambios.
         </div>
+        <?php endif; ?>
         
         <!-- Tarjeta informativa -->
         <div class="card mb-4" style="background-color: #f8f4ceff;">
@@ -405,10 +410,10 @@ if (!$reporte_bloqueado) {
                     
                     <div class="d-flex justify-content-between mt-4">
                         <a href="reporte_mensual_view.php?id=<?= $generador_id ?>" 
-                           class="btn btn-outline btn-outline-secondary">
+                        class="btn btn-outline btn-outline-secondary">
                             <i class="bi bi-arrow-left me-2"></i>Volver
                         </a>
-                        <?php if ($contingencia['estado']=='borrador'): ?>                            
+                        <?php if (!$reporte_bloqueado): ?>                            
                         <button type="submit" class="btn btn-outline btn-outline-success">
                             <i class="bi bi-check-circle me-2"></i><?= $info_adicional ? 'Actualizar' : 'Guardar' ?> Reporte
                         </button>

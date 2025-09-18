@@ -41,20 +41,20 @@ class ReporteContingenciasController {
     // Lista de acciones posibles para incendios
     public function obtenerAccionesIncendios() {
         return [
-            'activacion_protocolo' => 'Activación del protocolo de emergencia',
-            'evacuacion' => 'Procedimiento de evacuación',
-            'uso_extintores' => 'Uso de extintores',
+            'instalacion_extintor' => 'Instalación de extintor, detector de humo, aspersor u otro sistema similar',
+            'redisenio_area' => 'Rediseño/reubicación del area',
+            'verificacion_origen' => 'Verificación de origen del fuego',
             'llamada_bomberos' => 'Llamada a bomberos',
-            'otra' => 'Otra acción'
+            'otro' => 'Otra acción'
         ];
     }
     
     // Lista de acciones posibles para agua
     public function obtenerAccionesAgua() {
         return [
-            'reserva_agua' => 'Uso de reserva de agua',
-            'racionamiento' => 'Racionamiento del agua',
-            'busqueda_fuente' => 'Búsqueda de fuente alternativa',
+            'tanque_abastecimiento' => 'Instalación o aumento de capacidad del tanque',
+            'sistema_alternativo' => 'Implementación de sistema de suministro alternativo',
+            'limpieza_seco' => 'Implementación de sistemas de limpieza en seco',
             'reparacion' => 'Reparación del sistema',
             'otra' => 'Otra acción'
         ];
@@ -74,11 +74,9 @@ class ReporteContingenciasController {
     // Lista de acciones posibles para derrames
     public function obtenerAccionesDerrames() {
         return [
-            'contencion' => 'Contención del derrame',
-            'limpieza' => 'Limpieza y recolección',
-            'neutralizacion' => 'Neutralización del material',
-            'evacuacion_area' => 'Evacuación del área',
-            'reporte_autoridad' => 'Reporte a autoridad ambiental',
+            'kit_derrame' => 'Utilización de kit de derrame',
+            'limpieza_manual' => 'Limpieza manual',
+            'apoyo_tercero' => 'Apoyo de terceros especializados',
             'otra' => 'Otra acción'
         ];
     }
@@ -86,10 +84,9 @@ class ReporteContingenciasController {
     // Lista de acciones posibles para recolección
     public function obtenerAccionesRecoleccion() {
         return [
-            'almacenamiento_temporal' => 'Almacenamiento temporal',
-            'busqueda_recolector' => 'Búsqueda de recolector alternativo',
+            'gestor_alternativo' => 'Cotratación de gestor alternativo',
+            'ampliacion_almacenamiento' => 'Ampliación de capacidad de almacenamiento',
             'negociacion_urgencia' => 'Negociación de urgencia',
-            'transporte_propio' => 'Transporte propio',
             'otra' => 'Otra acción'
         ];
     }
@@ -98,10 +95,10 @@ class ReporteContingenciasController {
     public function obtenerAccionesOperativas() {
         return [
             'protocolo_contingencia' => 'Activación protocolo de contingencia',
-            'reprogramacion' => 'Reprogramación de actividades',
-            'personal_adicional' => 'Contratación de personal adicional',
+            'ampliacion_areas' => 'Ampliación de áreas de almacenamiento',
+            'gestion_personal' => 'Gestión de personal externo',
             'equipos_alternativos' => 'Uso de equipos alternativos',
-            'otra' => 'Otra acción'
+            'otro' => 'Otra acción'
         ];
     }
     

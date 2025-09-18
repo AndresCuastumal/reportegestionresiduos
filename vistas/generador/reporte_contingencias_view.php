@@ -44,26 +44,52 @@ $generador = $stmt->fetch(PDO::FETCH_ASSOC);
 
 // Obtener información de contingencias existente si existe
 $contingencias_existentes = null;
+
+// INICIALIZAR TODAS LAS VARIABLES DE ARRAYS
+$acciones_incendios = [];
+$acciones_agua = [];
+$acciones_energia = [];
+$acciones_derrames = [];
+$acciones_recoleccion = [];
+$acciones_operativas = [];
+
 $stmt_contingencias = $conn->prepare("SELECT * FROM contingencias WHERE generador_id = ? AND anio = ?");
 $stmt_contingencias->execute([$generador_id, $anio_actual]);
+
 if ($stmt_contingencias->rowCount() > 0) {
     $contingencias_existentes = $stmt_contingencias->fetch(PDO::FETCH_ASSOC);
     
-    // Decodificar las acciones si existen
-    $acciones_incendios = !empty($contingencias_existentes['incendios_acciones']) ? 
-        json_decode($contingencias_existentes['incendios_acciones'], true) : [];
-    $acciones_agua = !empty($contingencias_existentes['agua_acciones']) ? 
-        json_decode($contingencias_existentes['agua_acciones'], true) : [];
-    $acciones_energia = !empty($contingencias_existentes['energia_acciones']) ? 
-        json_decode($contingencias_existentes['energia_acciones'], true) : [];
-    $acciones_derrames = !empty($contingencias_existentes['derrames_acciones']) ? 
-        json_decode($contingencias_existentes['derrames_acciones'], true) : [];
-    $acciones_recoleccion = !empty($contingencias_existentes['recoleccion_acciones']) ? 
-        json_decode($contingencias_existentes['recoleccion_acciones'], true) : [];
-    $acciones_operativas = !empty($contingencias_existentes['operativas_acciones']) ? 
-        json_decode($contingencias_existentes['operativas_acciones'], true) : [];
+    // Decodificar las acciones si existen - CON VERIFICACIÓN DE ARRAY
+    if (!empty($contingencias_existentes['incendios_acciones'])) {
+        $decoded = json_decode($contingencias_existentes['incendios_acciones'], true);
+        $acciones_incendios = is_array($decoded) ? $decoded : [];
+    }
+    
+    if (!empty($contingencias_existentes['agua_acciones'])) {
+        $decoded = json_decode($contingencias_existentes['agua_acciones'], true);
+        $acciones_agua = is_array($decoded) ? $decoded : [];
+    }
+    
+    if (!empty($contingencias_existentes['energia_acciones'])) {
+        $decoded = json_decode($contingencias_existentes['energia_acciones'], true);
+        $acciones_energia = is_array($decoded) ? $decoded : [];
+    }
+    
+    if (!empty($contingencias_existentes['derrames_acciones'])) {
+        $decoded = json_decode($contingencias_existentes['derrames_acciones'], true);
+        $acciones_derrames = is_array($decoded) ? $decoded : [];
+    }
+    
+    if (!empty($contingencias_existentes['recoleccion_acciones'])) {
+        $decoded = json_decode($contingencias_existentes['recoleccion_acciones'], true);
+        $acciones_recoleccion = is_array($decoded) ? $decoded : [];
+    }
+    
+    if (!empty($contingencias_existentes['operativas_acciones'])) {
+        $decoded = json_decode($contingencias_existentes['operativas_acciones'], true);
+        $acciones_operativas = is_array($decoded) ? $decoded : [];
+    }
 }
-
 // Verificar si el reporte ya está confirmado (bloqueado)
 $reporte_confirmado = ($contingencias_existentes && $contingencias_existentes['estado'] == 'confirmado');
 $readonly = $reporte_confirmado ? 'readonly' : '';
@@ -209,7 +235,7 @@ if ($reporte_confirmado): ?>
                                     <input class="form-check-input" type="checkbox" 
                                            name="incendios_acciones[]" 
                                            value="instalacion_extintor" id="incendio1"
-                                           <?= (in_array('instalacion_extintor', $acciones_incendios)) ? 'checked' : '' ?> <?= $disabled ?>>
+                                           <?= (is_array($acciones_incendios) && in_array('instalacion_extintor', $acciones_incendios)) ? 'checked' : '' ?> <?= $disabled ?>>
                                     <label class="form-check-label" for="incendio1">
                                         Instalación de extintor, detector de humo, aspersor u otro sistema similar
                                     </label>
@@ -218,7 +244,7 @@ if ($reporte_confirmado): ?>
                                     <input class="form-check-input" type="checkbox" 
                                            name="incendios_acciones[]" 
                                            value="redisenio_area" id="incendio2"
-                                           <?= (in_array('redisenio_area', $acciones_incendios)) ? 'checked' : '' ?> <?= $disabled ?>>
+                                          <?= (is_array($acciones_incendios) && in_array('redisenio_area', $acciones_incendios)) ? 'checked' : '' ?> <?= $disabled ?>>
                                     <label class="form-check-label" for="incendio2">
                                         Rediseño/reubicación del area
                                     </label>
@@ -227,7 +253,7 @@ if ($reporte_confirmado): ?>
                                     <input class="form-check-input" type="checkbox" 
                                            name="incendios_acciones[]" 
                                            value="verificacion_origen" id="incendio3"
-                                           <?= (in_array('verificacion_origen', $acciones_incendios)) ? 'checked' : '' ?> <?= $disabled ?>>
+                                           <?= (is_array($acciones_incendios) && in_array('verificacion_origen', $acciones_incendios)) ? 'checked' : '' ?> <?= $disabled ?>>
                                     <label class="form-check-label" for="incendio3">
                                         Verificación de origen del fuego
                                     </label>
@@ -235,13 +261,22 @@ if ($reporte_confirmado): ?>
                                 <div class="form-check mb-2">
                                     <input class="form-check-input" type="checkbox" 
                                            name="incendios_acciones[]" 
+                                           value="llamada_bomberos" id="incendio3"
+                                           <?= (is_array($acciones_incendios) && in_array('llamada_bomberos', $acciones_incendios)) ? 'checked' : '' ?> <?= $disabled ?>>
+                                    <label class="form-check-label" for="incendio3">
+                                        Llamada a bomberos
+                                    </label>
+                                </div>
+                                <div class="form-check mb-2">
+                                    <input class="form-check-input" type="checkbox" 
+                                           name="incendios_acciones[]" 
                                            value="otro" id="incendio_otro"
-                                           <?= (in_array('otro', $acciones_incendios) || !empty($contingencias_existentes['incendios_otra_accion'])) ? 'checked' : '' ?> <?= $disabled ?>>
+                                           <?= (is_array($acciones_incendios) && in_array('otro', $acciones_incendios) || !empty($contingencias_existentes['incendios_otra_accion'])) ? 'checked' : '' ?> <?= $disabled ?>>
                                     <label class="form-check-label" for="incendio_otro">
                                         Otro (especifique cual)
                                     </label>
                                 </div>
-                                <div class="mt-2" id="incendio_otro_container" style="display: <?= (!empty($contingencias_existentes['incendios_otra_accion']) || (isset($acciones_incendios)&& in_array('otro', $acciones_incendios))) ? 'block' : 'none' ?>;">
+                                <div class="mt-2" id="incendio_otro_container" style="display: <?= (!empty($contingencias_existentes['incendios_otra_accion']) || (isset($acciones_incendios) && is_array($acciones_incendios) && in_array('otro', $acciones_incendios))) ? 'block' : 'none' ?>;">
                                     <input type="text" class="form-control" 
                                            name="incendios_otra_accion" 
                                            placeholder="Especifique la acción"
@@ -288,7 +323,7 @@ if ($reporte_confirmado): ?>
                                     <input class="form-check-input" type="checkbox" 
                                            name="agua_acciones[]" 
                                            value="tanque_abastecimiento" id="agua1"
-                                           <?= (in_array('tanque_abastecimiento', $acciones_agua)) ? 'checked' : '' ?> <?= $disabled ?>>
+                                           <?= (is_array($acciones_agua) && in_array('tanque_abastecimiento', $acciones_agua)) ? 'checked' : '' ?> <?= $disabled ?>>
                                     <label class="form-check-label" for="agua1">
                                         Instalación o aumento de capacidad del tanque
                                     </label>
@@ -297,7 +332,7 @@ if ($reporte_confirmado): ?>
                                     <input class="form-check-input" type="checkbox" 
                                            name="agua_acciones[]" 
                                            value="sistema_alternativo" id="agua2"
-                                           <?= (in_array('sistema_alternativo', $acciones_agua)) ? 'checked' : '' ?> <?= $disabled ?>>
+                                           <?= (is_array($acciones_agua) && in_array('sistema_alternativo', $acciones_agua)) ? 'checked' : '' ?> <?= $disabled ?>>
                                     <label class="form-check-label" for="agua2">
                                         Implementación de sistema de suministro alternativo
                                     </label>
@@ -306,7 +341,7 @@ if ($reporte_confirmado): ?>
                                     <input class="form-check-input" type="checkbox" 
                                            name="agua_acciones[]" 
                                            value="limpieza_seco" id="agua3"
-                                           <?= (in_array('limpieza_seco', $acciones_agua)) ? 'checked' : '' ?> <?= $disabled ?>>
+                                           <?= (is_array($acciones_agua) && in_array('limpieza_seco', $acciones_agua)) ? 'checked' : '' ?> <?= $disabled ?>>
                                     <label class="form-check-label" for="agua3">
                                         Implementación de sistemas de limpieza en seco
                                     </label>
@@ -314,13 +349,22 @@ if ($reporte_confirmado): ?>
                                 <div class="form-check mb-2">
                                     <input class="form-check-input" type="checkbox" 
                                            name="agua_acciones[]" 
-                                           value="otro" id="agua_otro"
-                                           <?= (in_array('otro', $acciones_agua) || !empty($contingencias_existentes['agua_otra_accion'])) ? 'checked' : '' ?> <?= $disabled ?>>
+                                           value="reparacion" id="agua4"
+                                           <?= (is_array($acciones_agua) && in_array('reparacion', $acciones_agua)) ? 'checked' : '' ?> <?= $disabled ?>>
+                                    <label class="form-check-label" for="agua3">
+                                        Reparación del sistema
+                                    </label>
+                                </div>
+                                <div class="form-check mb-2">
+                                    <input class="form-check-input" type="checkbox" 
+                                           name="agua_acciones[]" 
+                                           value="otra" id="agua_otro"
+                                           <?= (is_array($acciones_agua) && in_array('otra', $acciones_agua) || !empty($contingencias_existentes['agua_otra_accion'])) ? 'checked' : '' ?> <?= $disabled ?>>
                                     <label class="form-check-label" for="agua_otro">
                                         Otro (especifique cual)
                                     </label>
                                 </div>
-                                <div class="mt-2" id="agua_otro_container" style="display: <?= (!empty($contingencias_existentes['agua_otra_accion']) || (isset($acciones_agua) && in_array('otro', $acciones_agua))) ? 'block' : 'none' ?>;">
+                                <div class="mt-2" id="agua_otro_container" style="display: <?= (!empty($contingencias_existentes['agua_otra_accion']) || (isset($acciones_agua) && is_array($acciones_agua) && in_array('otro', $acciones_agua))) ? 'block' : 'none' ?>;">
                                     <input type="text" class="form-control" 
                                            name="agua_otra_accion" 
                                            placeholder="Especifique la acción"
@@ -347,8 +391,8 @@ if ($reporte_confirmado): ?>
                                 <div class="form-check mb-2">
                                     <input class="form-check-input" type="checkbox" 
                                            name="energia_acciones[]" 
-                                           value="planta_electrica" id="energia1"
-                                           <?= (in_array('planta_electrica', $acciones_energia)) ? 'checked' : '' ?> <?= $disabled ?>>
+                                           value="generador" id="energia1"
+                                           <?= (is_array($acciones_energia) && in_array('generador', $acciones_energia)) ? 'checked' : '' ?> <?= $disabled ?>>
                                     <label class="form-check-label" for="energia1">
                                         Instalación de planta eléctrica o sistema alternativo
                                     </label>
@@ -356,13 +400,31 @@ if ($reporte_confirmado): ?>
                                 <div class="form-check mb-2">
                                     <input class="form-check-input" type="checkbox" 
                                            name="energia_acciones[]" 
-                                           value="otro" id="energia_otro"
-                                           <?= (in_array('otro', $acciones_energia) || !empty($contingencias_existentes['energia_otra_accion'])) ? 'checked' : '' ?> <?= $disabled ?>>
+                                           value="racionamiento_energia" id="energia2"
+                                           <?= (is_array($acciones_energia) && in_array('racionamiento_energia', $acciones_energia)) ? 'checked' : '' ?> <?= $disabled ?>>
+                                    <label class="form-check-label" for="energia2">
+                                        Racionamiento del uso de energía
+                                    </label>
+                                </div>
+                                <div class="form-check mb-2">
+                                    <input class="form-check-input" type="checkbox" 
+                                           name="energia_acciones[]" 
+                                           value="reparacion_electrica" id="energia4"
+                                           <?= (is_array($acciones_energia) && in_array('reparacion_electrica', $acciones_energia)) ? 'checked' : '' ?> <?= $disabled ?>>
+                                    <label class="form-check-label" for="energia4">
+                                        Reparación del sistema eléctrico
+                                    </label>
+                                </div>
+                                <div class="form-check mb-2">
+                                    <input class="form-check-input" type="checkbox" 
+                                           name="energia_acciones[]" 
+                                           value="otra" id="energia_otro"
+                                           <?= (in_array('otra', $acciones_energia) || !empty($contingencias_existentes['energia_otra_accion'])) ? 'checked' : '' ?> <?= $disabled ?>>
                                     <label class="form-check-label" for="energia_otro">
                                         Otro (especifique cual)
                                     </label>
                                 </div>
-                                <div class="mt-2" id="energia_otro_container" style="display: <?= (!empty($contingencias_existentes['energia_otra_accion'])|| (isset($acciones_energia) && in_array('otro', $acciones_energia))) ? 'block' : 'none' ?>;">
+                                <div class="mt-2" id="energia_otro_container" style="display: <?= (!empty($contingencias_existentes['energia_otra_accion'])|| (isset($acciones_energia) && is_array($acciones_energia) && in_array('otro', $acciones_energia))) ? 'block' : 'none' ?>;">
                                     <input type="text" class="form-control" 
                                            name="energia_otra_accion" 
                                            placeholder="Especifique la acción"
@@ -402,7 +464,7 @@ if ($reporte_confirmado): ?>
                                     <input class="form-check-input" type="checkbox" 
                                            name="derrames_acciones[]" 
                                            value="kit_derrame" id="derrame1"
-                                           <?= (in_array('kit_derrame', $acciones_derrames)) ? 'checked' : '' ?> <?= $disabled ?>>
+                                           <?= (is_array($acciones_derrames) && in_array('kit_derrame', $acciones_derrames)) ? 'checked' : '' ?> <?= $disabled ?>>
                                     <label class="form-check-label" for="derrame1">
                                         Utilización del kit de derrame
                                     </label>
@@ -411,7 +473,7 @@ if ($reporte_confirmado): ?>
                                     <input class="form-check-input" type="checkbox" 
                                            name="derrames_acciones[]" 
                                            value="limpieza_manual" id="derrame2"
-                                           <?= (in_array('limpieza_manual', $acciones_derrames)) ? 'checked' : '' ?> <?= $disabled ?>>
+                                           <?= (is_array($acciones_derrames) && in_array('limpieza_manual', $acciones_derrames)) ? 'checked' : '' ?> <?= $disabled ?>>
                                     <label class="form-check-label" for="derrame2">
                                         Limpieza manual
                                     </label>
@@ -420,21 +482,21 @@ if ($reporte_confirmado): ?>
                                     <input class="form-check-input" type="checkbox" 
                                            name="derrames_acciones[]" 
                                            value="apoyo_tercero" id="derrame3"
-                                           <?= (in_array('apoyo_tercero', $acciones_derrames)) ? 'checked' : '' ?> <?= $disabled ?>>
+                                           <?= (is_array($acciones_derrames) && in_array('apoyo_tercero', $acciones_derrames)) ? 'checked' : '' ?> <?= $disabled ?>>
                                     <label class="form-check-label" for="derrame3">
-                                        Solicitud de apoyo de un tercero
+                                        Apoyo de terceros especializados
                                     </label>
                                 </div>
                                 <div class="form-check mb-2">
                                     <input class="form-check-input" type="checkbox" 
                                            name="derrames_acciones[]" 
-                                           value="otro" id="derrame_otro"
-                                           <?= (in_array('otro', $acciones_derrames) || !empty($contingencias_existentes['derrames_otra_accion'])) ? 'checked' : '' ?> <?= $disabled ?>>
+                                           value="otra" id="derrame_otro"
+                                           <?= (is_array($acciones_derrames) && in_array('otra', $acciones_derrames) || !empty($contingencias_existentes['derrames_otra_accion'])) ? 'checked' : '' ?> <?= $disabled ?>>
                                     <label class="form-check-label" for="derrame_otro">
                                         Otro (especifique cual)
                                     </label>
                                 </div>
-                                <div class="mt-2" id="derrame_otro_container" style="display: <?= (!empty($contingencias_existentes['derrames_otra_accion'])|| (isset($acciones_derrames) && in_array('otro', $acciones_derrames))) ? 'block' : 'none' ?>;">
+                                <div class="mt-2" id="derrame_otro_container" style="display: <?= (!empty($contingencias_existentes['derrames_otra_accion'])|| (isset($acciones_derrames) && is_array($acciones_derrames) && in_array('otro', $acciones_derrames))) ? 'block' : 'none' ?>;">
                                     <input type="text" class="form-control" 
                                            name="derrames_otra_accion" 
                                            placeholder="Especifique la acción"
@@ -462,7 +524,7 @@ if ($reporte_confirmado): ?>
                                     <input class="form-check-input" type="checkbox" 
                                            name="recoleccion_acciones[]" 
                                            value="gestor_alternativo" id="recoleccion1"
-                                           <?= (in_array('gestor_alternativo', $acciones_recoleccion)) ? 'checked' : '' ?> <?= $disabled ?>>
+                                           <?= (is_array($acciones_recoleccion) && in_array('gestor_alternativo', $acciones_recoleccion)) ? 'checked' : '' ?> <?= $disabled ?>>
                                     <label class="form-check-label" for="recoleccion1">
                                         Contratación de un gestor alternativo
                                     </label>
@@ -471,7 +533,7 @@ if ($reporte_confirmado): ?>
                                     <input class="form-check-input" type="checkbox" 
                                            name="recoleccion_acciones[]" 
                                            value="ampliacion_almacenamiento" id="recoleccion2"
-                                           <?= (in_array('ampliacion_almacenamiento', $acciones_recoleccion)) ? 'checked' : '' ?> <?= $disabled ?>>
+                                           <?= (is_array($acciones_recoleccion) && in_array('ampliacion_almacenamiento', $acciones_recoleccion)) ? 'checked' : '' ?> <?= $disabled ?>>
                                     <label class="form-check-label" for="recoleccion2">
                                         Ampliación del area de almacenamiento
                                     </label>
@@ -479,13 +541,13 @@ if ($reporte_confirmado): ?>
                                 <div class="form-check mb-2">
                                     <input class="form-check-input" type="checkbox" 
                                            name="recoleccion_acciones[]" 
-                                           value="otro" id="recoleccion_otro"
-                                           <?= (in_array('otro', $acciones_recoleccion) || !empty($contingencias_existentes['recoleccion_otra_accion'])) ? 'checked' : '' ?> <?= $disabled ?>>
+                                           value="otra" id="recoleccion_otro"
+                                           <?= (is_array($acciones_recoleccion) && in_array('otra', $acciones_recoleccion) || !empty($contingencias_existentes['recoleccion_otra_accion'])) ? 'checked' : '' ?> <?= $disabled ?>>
                                     <label class="form-check-label" for="recoleccion_otro">
                                         Otro (especifique cual)
                                     </label>
                                 </div>
-                                <div class="mt-2" id="recoleccion_otro_container" style="display: <?= (!empty($contingencias_existentes['recoleccion_otra_accion'])|| (isset($acciones_recoleccion) && in_array('otro', $acciones_recoleccion))) ? 'block' : 'none' ?>;">
+                                <div class="mt-2" id="recoleccion_otro_container" style="display: <?= (!empty($contingencias_existentes['recoleccion_otra_accion'])|| (isset($acciones_recoleccion) && is_array($acciones_recoleccion) && in_array('otro', $acciones_recoleccion))) ? 'block' : 'none' ?>;">
                                     <input type="text" class="form-control" 
                                            name="recoleccion_otra_accion" 
                                            placeholder="Especifique la acción"
@@ -513,7 +575,7 @@ if ($reporte_confirmado): ?>
                                     <input class="form-check-input" type="checkbox" 
                                            name="operativas_acciones[]" 
                                            value="gestion_personal" id="operativa1"
-                                           <?= (in_array('gestion_personal', $acciones_operativas)) ? 'checked' : '' ?> <?= $disabled ?>>
+                                           <?= (is_array($acciones_operativas) && in_array('gestion_personal', $acciones_operativas)) ? 'checked' : '' ?> <?= $disabled ?>>
                                     <label class="form-check-label" for="operativa1">
                                         Gestión de personal externo
                                     </label>
@@ -522,9 +584,18 @@ if ($reporte_confirmado): ?>
                                     <input class="form-check-input" type="checkbox" 
                                            name="operativas_acciones[]" 
                                            value="ampliacion_areas" id="operativa2"
-                                           <?= (in_array('ampliacion_areas', $acciones_operativas)) ? 'checked' : '' ?> <?= $disabled ?>>
+                                           <?= (is_array($acciones_operativas) && in_array('ampliacion_areas', $acciones_operativas)) ? 'checked' : '' ?> <?= $disabled ?>>
                                     <label class="form-check-label" for="operativa2">
                                         Ampliación de las areas de almacenamiento
+                                    </label>
+                                </div>
+                                 <div class="form-check mb-2">
+                                    <input class="form-check-input" type="checkbox" 
+                                           name="operativas_acciones[]" 
+                                           value="protocolo_contingencia" id="operativa4"
+                                           <?= (is_array($acciones_operativas) && in_array('protocolo_contingencia', $acciones_operativas)) ? 'checked' : '' ?> <?= $disabled ?>>
+                                    <label class="form-check-label" for="operativa2">
+                                        Activación de protocolos de contingencia
                                     </label>
                                 </div>
                                 <div class="form-check mb-2">
@@ -536,7 +607,7 @@ if ($reporte_confirmado): ?>
                                         Otro (especifique cual)
                                     </label>
                                 </div>
-                                <div class="mt-2" id="operativa_otro_container" style="display: <?= (!empty($contingencias_existentes['operativas_otra_accion'])|| (isset($acciones_operativas) && in_array('otro', $acciones_operativas))) ? 'block' : 'none' ?>;">
+                                <div class="mt-2" id="operativa_otro_container" style="display: <?= (!empty($contingencias_existentes['operativas_otra_accion'])|| (isset($acciones_operativas) && is_array($acciones_operativas) && in_array('otro', $acciones_operativas))) ? 'block' : 'none' ?>;">
                                     <input type="text" class="form-control" 
                                            name="operativas_otra_accion" 
                                            placeholder="Especifique la acción"

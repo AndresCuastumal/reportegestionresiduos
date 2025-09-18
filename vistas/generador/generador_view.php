@@ -41,7 +41,7 @@ include '../../includes/header.php'; // Incluye el encabezado HTML
         <div class="card mb-4" style="background-color: #f8f4ceff;">
             <div class="card-body">
                 <p class="card-text" style="text-align: justify; text-justify: inter-word;">
-                    Complete la información del establecimiento donde se generan residuos peligrosos. 
+                    Complete la información del establecimiento generador de residuos por atención en salud. 
                     Todos los campos marcados con <span class="text-danger">*</span> son obligatorios.
                 </p>
             </div>
@@ -78,20 +78,29 @@ include '../../includes/header.php'; // Incluye el encabezado HTML
                     <?php unset($_SESSION['mensaje_exito']); ?>
                 <?php endif; ?>
 
-                <form method="POST">
+                <form method="POST" id="formGenerador">
                     <!-- Campo oculto para ID si estamos editando -->
                     <?php if (isset($generadorExistente['id'])): ?>
                         <input type="hidden" name="id_generador" value="<?= htmlspecialchars($generadorExistente['id']) ?>">
                     <?php endif; ?>
+
+                    <!-- Campo oculto para la dirección estandarizada -->
+                    <input type="hidden" id="dir_establecimiento" name="dir_establecimiento" 
+                           value="<?= htmlspecialchars($generadorExistente['dir_establecimiento'] ?? '') ?>">
 
                     <!-- Sección 1: Datos del Establecimiento -->
                     <div class="mb-4">
                         <h6 class="text-muted border-bottom pb-2 mb-3">Datos del Establecimiento</h6>
                         <div class="row">
                             <div class="col-md-6 mb-3">
-                                <label for="nom_generador" class="form-label">Nombre <span class="text-danger">*</span></label>
+                                <label for="nom_generador" class="form-label">Nombre establecimiento <span class="text-danger">*</span></label>
                                 <input type="text" class="form-control" id="nom_generador" name="nom_generador" 
                                        value="<?= htmlspecialchars($generadorExistente['nom_generador'] ?? '') ?>" required>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="razon_social" class="form-label">Razon Social <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control" id="razon_social" name="razon_social" 
+                                       value="<?= htmlspecialchars($generadorExistente['razon_social'] ?? '') ?>" required>
                             </div>
                             <div class="col-md-6 mb-3">
                                 <label for="nit" class="form-label">NIT <span class="text-danger">*</span></label>
@@ -116,9 +125,19 @@ include '../../includes/header.php'; // Incluye el encabezado HTML
                                 </select>
                             </div>
                             <div class="col-md-6 mb-3">
-                                <label for="dir_establecimiento" class="form-label">Dirección <span class="text-danger">*</span></label>
-                                <input type="text" class="form-control" id="dir_establecimiento" name="dir_establecimiento" 
-                                       value="<?= htmlspecialchars($generadorExistente['dir_establecimiento'] ?? '') ?>" required>
+                                <label class="form-label">Dirección <span class="text-danger">*</span></label>
+                                <div class="input-group">
+                                    <input type="text" class="form-control" id="dir_mostrar" 
+                                           value="<?= htmlspecialchars($generadorExistente['dir_establecimiento'] ?? '') ?>" 
+                                           placeholder="Seleccione la dirección" readonly
+                                           style="cursor: pointer; background-color: #f8f9fa;">
+                                    <button type="button" class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#modalDireccion">
+                                        <i class="bi bi-geo-alt me-1"></i>Seleccionar
+                                    </button>
+                                </div>
+                                <small class="form-text text-muted">
+                                    <i class="bi bi-info-circle"></i> Haga clic en "Seleccionar" para estandarizar la dirección
+                                </small>
                             </div>
                             <div class="col-md-6 mb-3">
                                 <label for="tel_establecimiento" class="form-label">Teléfono</label>
@@ -179,6 +198,11 @@ include '../../includes/header.php'; // Incluye el encabezado HTML
             </div>
         </div>
     </div>
+    <!-- Modal para selección de dirección -->
+    <?php include '../../includes/direccion.php'; ?>
+
+    <!-- js para manejar el formulario y la dirección -->
+    <script src="../../assets/js/mostrar_direccion.js"></script>
 
     <!-- Footer -->
     <?php include '../../includes/footer.php'; ?>

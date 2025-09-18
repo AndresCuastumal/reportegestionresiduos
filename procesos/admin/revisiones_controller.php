@@ -189,19 +189,20 @@ class RevisionesController {
                 break;
                 
             case 'accidentes':
-                $tabla = 'reporte_anual_adicional';
+                // Verificar si existe al menos un registro en reporte_anual_adicional
                 $stmt = $this->conn->prepare("
                     SELECT COUNT(*) as total 
-                    FROM $tabla 
+                    FROM reporte_anual_adicional 
                     WHERE generador_id = ? AND anio = ?
                 ");
                 break;
                 
             case 'contingencias':
-                $tabla = 'contingencias';
+                // Verificar si existe al menos un registro en la tabla de contingencias
+                // Ajusta el nombre de la tabla si es diferente
                 $stmt = $this->conn->prepare("
                     SELECT COUNT(*) as total 
-                    FROM $tabla 
+                    FROM contingencias 
                     WHERE generador_id = ? AND anio = ?
                 ");
                 break;
@@ -214,6 +215,35 @@ class RevisionesController {
         $resultado = $stmt->fetch(PDO::FETCH_ASSOC);
         
         return $resultado['total'] > 0;
+    }
+
+    // Método para obtener el estado actual del formulario
+    public function obtenerEstadoFormulario($generador_id, $anio, $tipo_formulario) {
+        // Primero verificar si hay datos
+        $tieneDatos = $this->formularioTieneDatos($generador_id, $anio, $tipo_formulario);
+        
+        if (!$tieneDatos) {
+            return 'sin_datos';
+        }
+        
+        // Si hay datos, obtener el estado de la revisión
+        $campo_formulario = '';
+        switch ($tipo_formulario) {
+            case 'mensual': $campo_formulario = 'formulario_mensual'; break;
+            case 'accidentes': $campo_formulario = 'formulario_accidentes'; break;
+            case 'contingencias': $campo_formulario = 'formulario_contingencias'; break;
+            default: return 'sin_datos';
+        }
+        
+        $stmt = $this->conn->prepare("
+            SELECT $campo_formulario 
+            FROM revisiones_anuales 
+            WHERE generador_id = ? AND anio = ?
+        ");
+        $stmt->execute([$generador_id, $anio]);
+        $resultado = $stmt->fetch(PDO::FETCH_ASSOC);
+        
+        return $resultado[$campo_formulario] ?? 'pendiente';
     }
 }
 ?>

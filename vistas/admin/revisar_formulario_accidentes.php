@@ -29,12 +29,16 @@ $generador = $mensualController->obtenerDatosGenerador($generador_id);
 $datosReporte = $accidentesController->obtenerDatosReporteAdicional($generador_id, $anio);
 $accionesPreventivas = $accidentesController->obtenerAccionesPreventivas($datosReporte);
 
+// VERIFICAR SI REALMENTE HAY DATOS - NUEVA LÓGICA
+$tieneDatos = $accidentesController->existeRegistro($generador_id, $anio);
+
 // Lista de acciones preventivas posibles
+// Lista de acciones preventivas posibles - DEBE COINCIDIR CON LOS VALORES DEL FORMULARIO
 $listaAcciones = [
-    'refuerzo_capacitacion' => 'Refuerzo en capacitación',
-    'mejora_procedimientos' => 'Mejora de procedimientos',
-    'actualizacion_equipos' => 'Actualización de equipos',
-    'revision_protocolos' => 'Revisión de protocolos',
+    'remision_salud' => 'Remisión a servicios de salud',
+    'capacitacion_primeros_auxilios' => 'Capacitación en primeros auxilios',
+    'investigacion_accidente' => 'Investigación del accidente',
+    'actualizacion_procedimientos' => 'Actualización de procedimientos',
     'otra' => 'Otra acción'
 ];
 
@@ -137,7 +141,7 @@ include '../../includes/header.php';
                     </div>
                 </div>
 
-                <?php if ($datosReporte): ?>
+                <?php if ($tieneDatos): ?>
                 <!-- Datos de capacitaciones -->
                 <div class="info-card">
                     <h6><i class="bi bi-mortarboard me-2"></i>Capacitaciones</h6>
@@ -241,7 +245,7 @@ include '../../includes/header.php';
                             <h6 class="mb-0"><i class="bi bi-clipboard-check me-2"></i>Evaluación del Administrador</h6>
                         </div>
                         <div class="card-body">
-                            <?php if ($revision['formulario_accidentes'] === 'sin_datos'): ?>
+                            <?php if (!$tieneDatos): ?>
                                 <!-- Mostrar mensaje cuando no hay datos -->
                                 <div class="alert alert-info">
                                     <i class="bi bi-info-circle me-2"></i>

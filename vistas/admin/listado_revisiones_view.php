@@ -30,13 +30,7 @@ $inicio = ($pagina_actual - 1) * $registros_por_pagina;
 $revisiones_paginadas = array_slice($revisiones, $inicio, $registros_por_pagina);
 
 // Función para determinar el estado general basado en los tres formularios
-// Función para determinar el estado general basado en los tres formularios
-function determinarEstadoGeneral($formulario_mensual, $formulario_accidentes, $formulario_contingencias, $controller, $generador_id, $anio) {
-    // Verificar si los formularios tienen datos
-    $tiene_datos_mensual = $controller->formularioTieneDatos($generador_id, $anio, 'mensual');
-    $tiene_datos_accidentes = $controller->formularioTieneDatos($generador_id, $anio, 'accidentes');
-    $tiene_datos_contingencias = $controller->formularioTieneDatos($generador_id, $anio, 'contingencias');
-    
+function determinarEstadoGeneral($formulario_mensual, $formulario_accidentes, $formulario_contingencias) {
     // Si alguno está rechazado, estado general es "rechazado"
     if ($formulario_mensual === 'rechazado' || 
         $formulario_accidentes === 'rechazado' || 
@@ -51,13 +45,22 @@ function determinarEstadoGeneral($formulario_mensual, $formulario_accidentes, $f
         return 'aprobado';
     }
     
-    // Si algún formulario no tiene datos, estado es "sin_datos"
-    if (!$tiene_datos_mensual || !$tiene_datos_accidentes || !$tiene_datos_contingencias) {
+    // Si alguno está sin datos, estado es "sin_datos"
+    if ($formulario_mensual === 'sin_datos' || 
+        $formulario_accidentes === 'sin_datos' || 
+        $formulario_contingencias === 'sin_datos') {
         return 'sin_datos';
     }
     
-    // En cualquier otro caso, está "pendiente"
-    return 'pendiente';
+    // Si tienen datos pero no todos están aprobados, está "pendiente"
+    if (($formulario_mensual === 'pendiente' || $formulario_mensual === 'aprobado') && 
+        ($formulario_accidentes === 'pendiente' || $formulario_accidentes === 'aprobado') && 
+        ($formulario_contingencias === 'pendiente' || $formulario_contingencias === 'aprobado')) {
+        return 'pendiente';
+    }
+    
+    // En cualquier otro caso
+    return 'sin_datos';
 }
 
 // Función para obtener la clase CSS del badge según el estado
@@ -70,6 +73,7 @@ function obtenerClaseEstado($estado) {
         default: return 'badge-estado-sin-revision';
     }
 }
+
 // Función para obtener el texto del estado
 function obtenerTextoEstado($estado) {
     $estados = [
@@ -82,6 +86,7 @@ function obtenerTextoEstado($estado) {
     
     return $estados[$estado] ?? 'Desconocido';
 }
+
 include '../../includes/header.php';
 ?>
 <style>
@@ -138,7 +143,8 @@ include '../../includes/header.php';
                             <option value="">Todos los estados</option>
                             <option value="pendiente" <?= $filtro_estado === 'pendiente' ? 'selected' : '' ?>>Pendiente</option>
                             <option value="aprobado" <?= $filtro_estado === 'aprobado' ? 'selected' : '' ?>>Aprobado</option>
-                            <option value="rechazado" <?= $filtro_estado === 'rechazado' ? 'selected' : '' ?>>Rechazado</option>
+                            <option value 'rechazado' <?= $filtro_estado === 'rechazado' ? 'selected' : '' ?>>Rechazado</option>
+                            <option value="sin_datos" <?= $filtro_estado === 'sin_datos' ? 'selected' : '' ?>>Sin datos</option>
                         </select>
                     </div>
                     <div class="col-md-4 d-flex align-items-end">
@@ -182,15 +188,12 @@ include '../../includes/header.php';
                     </thead>
                     <tbody>
                         <?php foreach ($revisiones_paginadas as $revision): 
-                            // Determinar el estado general
+                            // Determinar el estado general usando SOLO los valores de los campos
                             $estado_general = determinarEstadoGeneral(
-                            $revision['formulario_mensual'],
-                            $revision['formulario_accidentes'],
-                            $revision['formulario_contingencias'],
-                            $controller,
-                            $revision['generador_id'],
-                            $revision['anio']
-                        );
+                                $revision['formulario_mensual'],
+                                $revision['formulario_accidentes'], 
+                                $revision['formulario_contingencias']
+                            );
                             
                             // Actualizar el estado general en la base de datos si es diferente
                             if ($revision['estado_general'] !== $estado_general) {
@@ -209,37 +212,25 @@ include '../../includes/header.php';
                             <td><?= $revision['anio'] ?></td>
                             <td>
                                 <div class="d-flex flex-column gap-2">
-                                    <?php
-                                    // Verificar si cada formulario tiene datos
-                                    $tiene_mensual = $controller->formularioTieneDatos($revision['generador_id'], $revision['anio'], 'mensual');
-                                    $tiene_accidentes = $controller->formularioTieneDatos($revision['generador_id'], $revision['anio'], 'accidentes');
-                                    $tiene_contingencias = $controller->formularioTieneDatos($revision['generador_id'], $revision['anio'], 'contingencias');
-                                    
-                                    // Determinar el estado a mostrar para cada formulario
-                                    $estado_mensual = $tiene_mensual ? $revision['formulario_mensual'] : 'sin_datos';
-                                    $estado_accidentes = $tiene_accidentes ? $revision['formulario_accidentes'] : 'sin_datos';
-                                    $estado_contingencias = $tiene_contingencias ? $revision['formulario_contingencias'] : 'sin_datos';
-                                    ?>
-                                    
                                     <!-- Botón para Reporte Mensual -->
                                     <a href="revisar_formulario_mensual.php?generador_id=<?= $revision['generador_id'] ?>&anio=<?= $revision['anio'] ?>" 
                                     class="btn-formulario btn-formulario-mensual" title="Revisar Reporte Mensual">
                                         <i class="bi bi-clipboard-data me-1"></i>
-                                        Reporte Mensual: <span class="fw-semibold"><?= ucfirst(obtenerTextoEstado($estado_mensual)) ?></span>
+                                        Reporte Mensual: <span class="fw-semibold"><?= ucfirst(obtenerTextoEstado($revision['formulario_mensual'])) ?></span>
                                     </a>
                                     
                                     <!-- Botón para Capacitaciones, Accidentes y Auditorías -->
                                     <a href="revisar_formulario_accidentes.php?generador_id=<?= $revision['generador_id'] ?>&anio=<?= $revision['anio'] ?>" 
                                     class="btn-formulario btn-formulario-accidentes" title="Revisar Capacitaciones y Accidentes">
                                         <i class="bi bi-exclamation-triangle me-1"></i>
-                                        Capacitaciones y Accidentes: <span class="fw-semibold"><?= ucfirst(obtenerTextoEstado($estado_accidentes)) ?></span>
+                                        Capacitaciones y Accidentes: <span class="fw-semibold"><?= ucfirst(obtenerTextoEstado($revision['formulario_accidentes'])) ?></span>
                                     </a>
                                     
                                     <!-- Botón para Plan de Contingencias -->
                                     <a href="revisar_formulario_contingencias.php?generador_id=<?= $revision['generador_id'] ?>&anio=<?= $revision['anio'] ?>" 
                                     class="btn-formulario btn-formulario-contingencias" title="Revisar Plan de Contingencias">
                                         <i class="bi bi-shield-exclamation me-1"></i>
-                                        Plan de Contingencias: <span class="fw-semibold"><?= ucfirst(obtenerTextoEstado($estado_contingencias)) ?></span>
+                                        Plan de Contingencias: <span class="fw-semibold"><?= ucfirst(obtenerTextoEstado($revision['formulario_contingencias'])) ?></span>
                                     </a>
                                 </div>
                             </td>

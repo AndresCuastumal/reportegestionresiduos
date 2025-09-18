@@ -68,75 +68,113 @@ try {
         $otra_accion_preventiva = null;
     }
     
-    // Verificar si ya existe un registro para este generador y año
-    $stmt_check = $conn->prepare("SELECT id FROM reporte_anual_adicional WHERE generador_id = ? AND anio = ?");
-    $stmt_check->execute([$generador_id, $anio]);
-    $existe_registro = $stmt_check->fetch(PDO::FETCH_ASSOC);
+    // Iniciar transacción para asegurar consistencia entre ambas tablas
+    $conn->beginTransaction();
     
-    if ($existe_registro) {
-        // Actualizar registro existente
-        $stmt = $conn->prepare("UPDATE reporte_anual_adicional SET 
-            num_capacitaciones_programadas = ?,
-            archivo_cronograma = ?,
-            num_capacitaciones_ejecutadas = ?,
-            archivo_soportes_capacitaciones = ?,
-            tiene_accidentes = ?,
-            num_accidentes = ?,
-            acciones_preventivas = ?,
-            otra_accion_preventiva = ?,
-            num_auditorias = ?,
-            archivo_resultados_auditorias = ?,
-            archivo_plan_mejoramiento = ?,
-            fecha_creacion = CURRENT_TIMESTAMP
-            WHERE generador_id = ? AND anio = ?");
+    try {
+        // Verificar si ya existe un registro para este generador y año
+        $stmt_check = $conn->prepare("SELECT id FROM reporte_anual_adicional WHERE generador_id = ? AND anio = ?");
+        $stmt_check->execute([$generador_id, $anio]);
+        $existe_registro = $stmt_check->fetch(PDO::FETCH_ASSOC);
         
-        $stmt->execute([
-            $_POST['num_capacitaciones_programadas'],
-            $archivo_cronograma,
-            $_POST['num_capacitaciones_ejecutadas'],
-            $archivo_soportes,
-            $_POST['tiene_accidentes'],
-            $num_accidentes,
-            $acciones_json,
-            $otra_accion_preventiva,
-            $_POST['num_auditorias'],
-            $archivo_resultados_auditorias,
-            $archivo_plan_mejoramiento,
-            $generador_id,
-            $anio
-        ]);
+        if ($existe_registro) {
+            // Actualizar registro existente
+            $stmt = $conn->prepare("UPDATE reporte_anual_adicional SET 
+                num_capacitaciones_programadas = ?,
+                archivo_cronograma = ?,
+                num_capacitaciones_ejecutadas = ?,
+                archivo_soportes_capacitaciones = ?,
+                tiene_accidentes = ?,
+                num_accidentes = ?,
+                acciones_preventivas = ?,
+                otra_accion_preventiva = ?,
+                num_auditorias = ?,
+                archivo_resultados_auditorias = ?,
+                archivo_plan_mejoramiento = ?,
+                fecha_creacion = CURRENT_TIMESTAMP
+                WHERE generador_id = ? AND anio = ?");
+            
+            $stmt->execute([
+                $_POST['num_capacitaciones_programadas'],
+                $archivo_cronograma,
+                $_POST['num_capacitaciones_ejecutadas'],
+                $archivo_soportes,
+                $_POST['tiene_accidentes'],
+                $num_accidentes,
+                $acciones_json,
+                $otra_accion_preventiva,
+                $_POST['num_auditorias'],
+                $archivo_resultados_auditorias,
+                $archivo_plan_mejoramiento,
+                $generador_id,
+                $anio
+            ]);
+            
+            $_SESSION['mensaje_exito'] = "¡Información adicional actualizada! Complete ahora el plan de contingencias.";
+        } else {
+            // Insertar nuevo registro
+            $stmt = $conn->prepare("INSERT INTO reporte_anual_adicional 
+                (generador_id, anio, num_capacitaciones_programadas, archivo_cronograma,
+                 num_capacitaciones_ejecutadas, archivo_soportes_capacitaciones,
+                 tiene_accidentes, num_accidentes, acciones_preventivas, otra_accion_preventiva,
+                 num_auditorias, archivo_resultados_auditorias, archivo_plan_mejoramiento)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+            
+            $stmt->execute([
+                $generador_id, $anio,
+                $_POST['num_capacitaciones_programadas'],
+                $archivo_cronograma,
+                $_POST['num_capacitaciones_ejecutadas'],
+                $archivo_soportes,
+                $_POST['tiene_accidentes'],
+                $num_accidentes,
+                $acciones_json,
+                $otra_accion_preventiva,
+                $_POST['num_auditorias'],
+                $archivo_resultados_auditorias,
+                $archivo_plan_mejoramiento
+            ]);
+            
+            $_SESSION['mensaje_exito'] = "¡Información adicional guardada! Complete ahora el plan de contingencias.";
+        }
         
-        $_SESSION['mensaje_exito'] = "¡Información adicional actualizada! Complete ahora el plan de contingencias.";
-    } else {
-        // Insertar nuevo registro
-        $stmt = $conn->prepare("INSERT INTO reporte_anual_adicional 
-            (generador_id, anio, num_capacitaciones_programadas, archivo_cronograma,
-             num_capacitaciones_ejecutadas, archivo_soportes_capacitaciones,
-             tiene_accidentes, num_accidentes, acciones_preventivas, otra_accion_preventiva,
-             num_auditorias, archivo_resultados_auditorias, archivo_plan_mejoramiento)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+        // ACTUALIZAR ESTADO EN REVISIONES_ANUALES - NUEVO CÓDIGO
+        // Verificar si existe registro en revisiones_anuales
+        $stmt_check_revision = $conn->prepare("SELECT generador_id FROM revisiones_anuales WHERE generador_id = ? AND anio = ?");
+        $stmt_check_revision->execute([$generador_id, $anio]);
+        $existe_revision = $stmt_check_revision->fetch(PDO::FETCH_ASSOC);
         
-        $stmt->execute([
-            $generador_id, $anio,
-            $_POST['num_capacitaciones_programadas'],
-            $archivo_cronograma,
-            $_POST['num_capacitaciones_ejecutadas'],
-            $archivo_soportes,
-            $_POST['tiene_accidentes'],
-            $num_accidentes,
-            $acciones_json,
-            $otra_accion_preventiva,
-            $_POST['num_auditorias'],
-            $archivo_resultados_auditorias,
-            $archivo_plan_mejoramiento
-        ]);
+        if ($existe_revision) {
+            // Actualizar estado del formulario de accidentes a "pendiente"
+            $stmt_update = $conn->prepare("UPDATE revisiones_anuales SET 
+                formulario_accidentes = 'pendiente',
+                fecha_revision = NULL,
+                revisado_por = NULL,
+                observaciones_accidentes = NULL
+                WHERE generador_id = ? AND anio = ?");
+            
+            $stmt_update->execute([$generador_id, $anio]);
+        } else {
+            // Insertar nuevo registro en revisiones_anuales
+            $stmt_insert = $conn->prepare("INSERT INTO revisiones_anuales 
+                (generador_id, anio, formulario_accidentes, estado_general)
+                VALUES (?, ?, 'pendiente', 'incompleto')");
+            
+            $stmt_insert->execute([$generador_id, $anio]);
+        }
         
-        $_SESSION['mensaje_exito'] = "¡Información adicional guardada! Complete ahora el plan de contingencias.";
+        // Confirmar transacción
+        $conn->commit();
+        
+        // Mantener los datos de sesión y redirigir al formulario de contingencias    
+        header("Location: ../../vistas/generador/reporte_contingencias_view.php?id=" . $generador_id);
+        exit();
+        
+    } catch (Exception $e) {
+        // Revertir transacción en caso de error
+        $conn->rollBack();
+        throw $e;
     }
-    
-    // Mantener los datos de sesión y redirigir al formulario de contingencias    
-    header("Location: ../../vistas/generador/reporte_contingencias_view.php?id=" . $generador_id);
-    exit();
     
 } catch (Exception $e) {
     $_SESSION['error'] = $e->getMessage();

@@ -45,7 +45,8 @@ if (isset($_GET['id'])) {
     $stmt_contingencias->execute([$generador_id, $anio_actual]);
     $contingencia = $stmt_contingencias->fetch(PDO::FETCH_ASSOC);
     
-    $reporte_bloqueado = ($contingencia && $contingencia['estado'] == 'confirmado');
+    // CORRECCIÓN: Verificar si $contingencia es un array antes de acceder
+    $reporte_bloqueado = ($contingencia && isset($contingencia['estado']) && $contingencia['estado'] == 'confirmado');
     $readonly = $reporte_bloqueado ? 'readonly' : '';
     $disabled = $reporte_bloqueado ? 'disabled' : '';
     
@@ -83,13 +84,14 @@ include '../../includes/header.php';
 ?>
 <?php
 // mensaje si el reporte ya fue enviado
-    if ($contingencia['estado']=='confirmado'): ?>
-        <div class="alert alert-warning text-center mb-0">
-            <i class="bi bi-exclamation-triangle me-2"></i>
-            <strong>El reporte anual para el año <?= $anio_actual ?> ya fue enviado y está en proceso de revisión.</strong>
-            No puede realizar modificaciones adicionales.
-        </div>    
-    <?php endif;
+// CORRECCIÓN: Verificar si $contingencia existe y tiene el estado 'confirmado'
+if(isset($contingencia) && is_array($contingencia) && isset($contingencia['estado']) && $contingencia['estado']=='confirmado'): ?>
+    <div class="alert alert-warning text-center mb-0">
+        <i class="bi bi-exclamation-triangle me-2"></i>
+        <strong>El reporte anual para el año <?= $anio_actual ?> ya fue enviado y está en proceso de revisión.</strong>
+        No puede realizar modificaciones adicionales.
+    </div>    
+<?php endif;
 ?>
 
     <!-- Contenedor principal -->
@@ -120,7 +122,7 @@ include '../../includes/header.php';
         </div>
 
         <!-- Mensaje informativo si ya existe información guardada -->
-        <?php if ($revision_existente and $contingencia['estado']=='borrador'): ?>
+        <?php if ($revision_existente && isset($contingencia) && is_array($contingencia) && isset($contingencia['estado']) && $contingencia['estado']=='borrador'): ?>
         <div class="alert alert-info mb-4">
             <i class="bi bi-info-circle-fill me-2"></i>
             <strong>Información precargada:</strong> Se han encontrado datos guardados previamente para este año. 
@@ -269,10 +271,13 @@ include '../../includes/header.php';
                         <a href="listado_generadores_view.php" class="btn btn-outline btn-outline-secondary">
                             <i class="bi bi-arrow-left me-2"></i>Volver
                         </a>
-                        <?php  if($contingencia['estado']=='borrador'): ?>
-                        <button type="submit" class="btn btn-outline btn-outline-success">
-                            <i class="bi bi-cloud-upload me-2"></i><?= $revision_existente ? 'Actualizar' : 'Guardar' ?> Reporte
-                        </button>
+                        <?php  
+                        // Mostrar botón SI NO está confirmado (puede ser borrador, null, o cualquier otro estado)
+                        if(!$reporte_bloqueado): 
+                            ?>
+                            <button type="submit" class="btn btn-outline btn-outline-success">
+                                <i class="bi bi-cloud-upload me-2"></i><?= $revision_existente ? 'Actualizar' : 'Guardar' ?> Reporte
+                            </button>
                         <?php endif; ?>
                     </div> 
                 </form>

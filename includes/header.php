@@ -27,9 +27,10 @@
                         <img src="../../assets/css/logoNuevoSMS2024.png" alt="Logo SMS" 
                             class="me-2 img-fluid d-md-none" 
                             style="max-height: 40px; width: auto;">
-                        <h1 class="h3 mb-0 text-center">Reporte de Gestión de Residuos Peligrosos</h1>
+                        <h1 class="h3 mb-0 text-center">Reporte de Gestión de Residuos Generados en Atención en Salud</h1>
                     </div>
-                    <div>
+                    <?php if (isset($_SESSION['usuario_id'])): ?>
+                    <div >
                         <span class="navbar-text me-3 d-none d-md-inline">
                             <?php echo $_SESSION['usuario_email']; ?>
                         </span>
@@ -37,6 +38,7 @@
                             <i class="bi bi-door-open me-1"></i> Cerrar Sesión
                         </a>
                     </div>
+                    <?php endif; ?>
                 </div>
             </div>
         </div>

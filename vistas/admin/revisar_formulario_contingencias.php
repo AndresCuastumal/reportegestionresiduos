@@ -246,19 +246,19 @@ include '../../includes/header.php';
                 </div>
 
                 <!-- Derrames -->
-                <div class="info-card mb-4">
+                <div class="info-card mb-6">
                     <h6><i class="bi bi-exclamation-triangle me-2"></i>Derrames</h6>
                     <div class="row">
-                        <div class="col-md-4">
+                        <div class="col-md-6">
                             <p><strong>Número de incidentes:</strong> <?= $datosContingencias['derrames_numero'] ?></p>
                         </div>
-                        <div class="col-md-4">
-                            <?php if (!empty($datosContingencias['derrames_tipo'])): ?>
+                        <?php if (!empty($datosContingencias['derrames_tipo'])): ?>
+                        <div class="col-md-4">                            
                             <p><strong>Tipo de derrame:</strong> 
                                 <?= isset($tiposDerrames[$datosContingencias['derrames_tipo']]) ? $tiposDerrames[$datosContingencias['derrames_tipo']] : $datosContingencias['derrames_tipo'] ?>
-                            </p>
-                            <?php endif; ?>
+                            </p>                            
                         </div>
+                        <?php endif; ?>
                         <div class="col-md-4">
                             <?php if (!empty($accionesDerramesData)): ?>
                             <p><strong>Acciones tomadas:</strong></p>

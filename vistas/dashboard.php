@@ -19,17 +19,17 @@ include '../includes/header.php'; // Incluye el encabezado HTML
             <div class="hero-content  p-4 " style="background-color: #f8f4ceff;">
                 <p class="lead mt-1" style="text-align: justify; text-justify: inter-word;">
                     Plataforma de reporte según Resolución 591 de 2024. De acuerdo con la normatividad vigente, 
-                    todos los generadores de residuos peligrosos deben reportar anualmente información relacionada con 
-                    la gestión de estos residuos. Para ello se deben diligenciar tres formularios:
+                    todos los establecimietos que generen residuos por la atención en salud deben reportar anualmente información relacionada con 
+                    la gestión de los mismos. Para ello se deben diligenciar tres formularios:
                 </p>
                 <ul class="list-group list-group-flush mt-4">
-                    <li class="list-group-item border-0" style="background-color: #ebe5afff;">
-                        <i class="bi bi-file-earmark-spreadsheet me-2" style="color: #d97706;"></i>Reporte mensual de residuos peligrosos
+                    <li class="list-group-item border-0" style="background-color: #ebe5af75;">
+                        <i class="bi bi-file-earmark-spreadsheet me-2" style="color: #d97706;"></i>Reporte mensual de residuos generados en atención en salud
                     </li>
                     <li class="list-group-item border-0" style="background-color: #f8f4ceff;">
                         <i class="bi bi-mortarboard me-2" style="color: #059669;"></i>Capacitaciones, accidentes y auditorías realizadas
                     </li>
-                    <li class="list-group-item border-0" style="background-color: #ebe5afff;">
+                    <li class="list-group-item border-0" style="background-color: #ebe5af75;">
                         <i class="bi bi-exclamation-triangle me-2" style="color: #dc2626;"></i>Contingencias
                     </li>
                 </ul>    
