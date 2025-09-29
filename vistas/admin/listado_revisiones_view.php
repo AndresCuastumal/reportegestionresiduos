@@ -29,6 +29,28 @@ $total_paginas = ceil($total_registros / $registros_por_pagina);
 $inicio = ($pagina_actual - 1) * $registros_por_pagina;
 $revisiones_paginadas = array_slice($revisiones, $inicio, $registros_por_pagina);
 
+foreach ($revisiones_paginadas as $revision): 
+// Validar que los campos existan y tengan valores por defecto
+$form_mensual = $revision['formulario_mensual'] ?? 'sin_datos';
+$form_accidentes = $revision['formulario_accidentes'] ?? 'sin_datos';
+$form_contingencias = $revision['formulario_contingencias'] ?? 'sin_datos';
+$estado_actual = $revision['estado_general'] ?? 'sin_datos';
+
+// Determinar el estado general
+$estado_general = determinarEstadoGeneral($form_mensual, $form_accidentes, $form_contingencias);
+
+// Actualizar el estado general en la base de datos si es diferente
+if ($estado_actual !== $estado_general) {
+    $controller->actualizarEstadoGeneral(
+        $revision['generador_id'], 
+        $revision['anio'], 
+        $estado_general
+    );
+    $revision['estado_general'] = $estado_general;
+}
+endforeach;
+
+// Función para determinar el estado general basado en los tres formularios
 // Función para determinar el estado general basado en los tres formularios
 function determinarEstadoGeneral($formulario_mensual, $formulario_accidentes, $formulario_contingencias) {
     // Si alguno está rechazado, estado general es "rechazado"
@@ -45,22 +67,8 @@ function determinarEstadoGeneral($formulario_mensual, $formulario_accidentes, $f
         return 'aprobado';
     }
     
-    // Si alguno está sin datos, estado es "sin_datos"
-    if ($formulario_mensual === 'sin_datos' || 
-        $formulario_accidentes === 'sin_datos' || 
-        $formulario_contingencias === 'sin_datos') {
-        return 'sin_datos';
-    }
-    
-    // Si tienen datos pero no todos están aprobados, está "pendiente"
-    if (($formulario_mensual === 'pendiente' || $formulario_mensual === 'aprobado') && 
-        ($formulario_accidentes === 'pendiente' || $formulario_accidentes === 'aprobado') && 
-        ($formulario_contingencias === 'pendiente' || $formulario_contingencias === 'aprobado')) {
-        return 'pendiente';
-    }
-    
-    // En cualquier otro caso
-    return 'sin_datos';
+    // En cualquier otro caso, está "pendiente"
+    return 'pendiente';
 }
 
 // Función para obtener la clase CSS del badge según el estado
@@ -89,9 +97,6 @@ function obtenerTextoEstado($estado) {
 
 include '../../includes/header.php';
 ?>
-<style>
-
-</style>
     <!-- Contenedor principal -->
     <div class="container my-4">
         <!-- Breadcrumb y título -->
@@ -143,8 +148,8 @@ include '../../includes/header.php';
                             <option value="">Todos los estados</option>
                             <option value="pendiente" <?= $filtro_estado === 'pendiente' ? 'selected' : '' ?>>Pendiente</option>
                             <option value="aprobado" <?= $filtro_estado === 'aprobado' ? 'selected' : '' ?>>Aprobado</option>
-                            <option value 'rechazado' <?= $filtro_estado === 'rechazado' ? 'selected' : '' ?>>Rechazado</option>
-                            <option value="sin_datos" <?= $filtro_estado === 'sin_datos' ? 'selected' : '' ?>>Sin datos</option>
+                            <option value="rechazado" <?= $filtro_estado === 'rechazado' ? 'selected' : '' ?>>Rechazado</option>
+                            <!-- Eliminamos la opción "sin_datos" -->
                         </select>
                     </div>
                     <div class="col-md-4 d-flex align-items-end">
@@ -166,6 +171,7 @@ include '../../includes/header.php';
             <?php if ($filtro_tipo || $filtro_estado): ?>
                 (filtradas)
             <?php endif; ?>
+            <br><small><em>Se muestran solo los generadores que reportaron datos en los tres formularios</em></small>
         </div>
         
         <?php if (empty($revisiones_paginadas)): ?>

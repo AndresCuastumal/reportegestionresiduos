@@ -358,8 +358,8 @@ if ($reporte_confirmado): ?>
                                 <div class="form-check mb-2">
                                     <input class="form-check-input" type="checkbox" 
                                            name="agua_acciones[]" 
-                                           value="otra" id="agua_otro"
-                                           <?= (is_array($acciones_agua) && in_array('otra', $acciones_agua) || !empty($contingencias_existentes['agua_otra_accion'])) ? 'checked' : '' ?> <?= $disabled ?>>
+                                           value="otro" id="agua_otro"
+                                           <?= (is_array($acciones_agua) && in_array('otro', $acciones_agua) || !empty($contingencias_existentes['agua_otra_accion'])) ? 'checked' : '' ?> <?= $disabled ?>>
                                     <label class="form-check-label" for="agua_otro">
                                         Otro (especifique cual)
                                     </label>
@@ -418,8 +418,8 @@ if ($reporte_confirmado): ?>
                                 <div class="form-check mb-2">
                                     <input class="form-check-input" type="checkbox" 
                                            name="energia_acciones[]" 
-                                           value="otra" id="energia_otro"
-                                           <?= (in_array('otra', $acciones_energia) || !empty($contingencias_existentes['energia_otra_accion'])) ? 'checked' : '' ?> <?= $disabled ?>>
+                                           value="otro" id="energia_otro"
+                                           <?= (in_array('otro', $acciones_energia) || !empty($contingencias_existentes['energia_otra_accion'])) ? 'checked' : '' ?> <?= $disabled ?>>
                                     <label class="form-check-label" for="energia_otro">
                                         Otro (especifique cual)
                                     </label>
@@ -490,8 +490,8 @@ if ($reporte_confirmado): ?>
                                 <div class="form-check mb-2">
                                     <input class="form-check-input" type="checkbox" 
                                            name="derrames_acciones[]" 
-                                           value="otra" id="derrame_otro"
-                                           <?= (is_array($acciones_derrames) && in_array('otra', $acciones_derrames) || !empty($contingencias_existentes['derrames_otra_accion'])) ? 'checked' : '' ?> <?= $disabled ?>>
+                                           value="otro" id="derrame_otro"
+                                           <?= (is_array($acciones_derrames) && in_array('otro', $acciones_derrames) || !empty($contingencias_existentes['derrames_otra_accion'])) ? 'checked' : '' ?> <?= $disabled ?>>
                                     <label class="form-check-label" for="derrame_otro">
                                         Otro (especifique cual)
                                     </label>
@@ -541,8 +541,8 @@ if ($reporte_confirmado): ?>
                                 <div class="form-check mb-2">
                                     <input class="form-check-input" type="checkbox" 
                                            name="recoleccion_acciones[]" 
-                                           value="otra" id="recoleccion_otro"
-                                           <?= (is_array($acciones_recoleccion) && in_array('otra', $acciones_recoleccion) || !empty($contingencias_existentes['recoleccion_otra_accion'])) ? 'checked' : '' ?> <?= $disabled ?>>
+                                           value="otro" id="recoleccion_otro"
+                                           <?= (is_array($acciones_recoleccion) && in_array('otro', $acciones_recoleccion) || !empty($contingencias_existentes['recoleccion_otra_accion'])) ? 'checked' : '' ?> <?= $disabled ?>>
                                     <label class="form-check-label" for="recoleccion_otro">
                                         Otro (especifique cual)
                                     </label>

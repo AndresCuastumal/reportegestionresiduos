@@ -26,7 +26,14 @@ $revision = $revisionController->obtenerRevision($generador_id, $anio);
 $generador = $mensualController->obtenerDatosGenerador($generador_id);
 $reportes_existentes = $mensualController->obtenerReportesExistentes($generador_id, $anio);
 
-// Procesar formulario de revisión
+// Verificar si la revisión está finalizada
+if ($revisionController->estaFinalizado($generador_id, $anio)) {
+    $_SESSION['warning'] = "Esta revisión ya ha sido finalizada y no puede ser modificada.";
+    header("Location: listado_revisiones_view.php");
+    exit();
+}
+
+//procesar formulario de revisión
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $estado = $_POST['estado'];
     $observaciones = $_POST['observaciones'] ?? '';
@@ -35,21 +42,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         'formulario_mensual' => $estado,
         'observaciones_mensual' => $observaciones,
         'revisado_por' => $_SESSION['usuario_id'],
-        'estado_general' => 'incompleto', // Cambiar según lógica
+        'estado_general' => 'pendiente', // Se calculará automáticamente
         'generador_id' => $generador_id,
         'anio' => $anio
     ];
     
     if ($revisionController->actualizarRevision($data)) {
-        $_SESSION['success'] = "Revisión actualizada correctamente";
+        $_SESSION['success'] = "Revisión del reporte mensual actualizada correctamente";
         
-        // Verificar si todos los formularios están aprobados
+        // Determinar a qué formulario redirigir
+        $siguiente_formulario = $revisionController->determinarSiguienteFormulario($generador_id, $anio);
+        
+        // Verificar si todos están aprobados
         if ($revisionController->verificarFormulariosCompletos($generador_id, $anio)) {
-            // Aquí iría la lógica para generar y enviar el certificado PDF
-            $_SESSION['info'] = "Todos los formularios están aprobados. Se enviará el certificado.";
+            $_SESSION['info'] = "¡Todos los formularios han sido aprobados!";
         }
         
-        header("Location: listado_revisiones_view.php");
+        header("Location: $siguiente_formulario");
         exit();
     } else {
         $_SESSION['error'] = "Error al actualizar la revisión";
@@ -58,9 +67,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 include '../../includes/header.php';
 ?>
-<style>
-
-</style>
     <!-- Contenedor principal -->
     <div class="container my-4">
         <!-- Breadcrumb -->
@@ -83,7 +89,7 @@ include '../../includes/header.php';
         <div class="card mb-4" style="background-color: #f8f4ceff;">
             <div class="card-body">
                 <p class="card-text" style="text-align: justify; text-justify: inter-word;">
-                    Revisión del reporte mensual de residuos peligrosos. Verifique la información y determine el estado del formulario.
+                    Revisión del reporte mensual de residuos generados en atención en salud. Verifique la información y determine el estado del formulario.
                 </p>
             </div>
         </div>
@@ -172,29 +178,70 @@ include '../../includes/header.php';
                             <h6 class="mb-0"><i class="bi bi-clipboard-check me-2"></i>Evaluación del Administrador</h6>
                         </div>
                         <div class="card-body">
-                            <div class="mb-3">
-                                <label class="form-label">Estado del formulario:</label>
-                                <select name="estado" class="form-select" required>
-                                    <option value="pendiente" <?= $revision['formulario_mensual'] === 'pendiente' ? 'selected' : '' ?>>Pendiente</option>
-                                    <option value="aprobado" <?= $revision['formulario_mensual'] === 'aprobado' ? 'selected' : '' ?>>Aprobado</option>
-                                    <option value="rechazado" <?= $revision['formulario_mensual'] === 'rechazado' ? 'selected' : '' ?>>Rechazado</option>
-                                </select>
-                            </div>
+                            <?php if ($revisionController->estaFinalizado($generador_id, $anio)): ?>
+                                <!-- ⭐ NUEVO: Mostrar alerta cuando está finalizado -->
+                                <div class="alert alert-warning">
+                                    <i class="bi bi-lock-fill me-2"></i>
+                                    <strong>Revisión Finalizada</strong> - Esta revisión ya ha sido completada y no puede ser modificada. 
+                                    <?php if ($revision['estado_general'] === 'aprobado'): ?>
+                                        El certificado fue enviado al generador.
+                                    <?php else: ?>
+                                        Las observaciones fueron enviadas al generador.
+                                    <?php endif; ?>
+                                </div>
+                                
+                                <!-- Campos deshabilitados -->
+                                <fieldset disabled>
+                                    <div class="mb-3">
+                                        <label class="form-label">Estado del formulario:</label>
+                                        <select name="estado" class="form-select">
+                                            <option value="<?= $revision['formulario_mensual'] ?>" selected>
+                                                <?= ucfirst($revision['formulario_mensual']) ?>
+                                            </option>
+                                        </select>
+                                    </div>
 
-                            <div class="mb-3">
-                                <label class="form-label">Observaciones:</label>
-                                <textarea name="observaciones" class="form-control" rows="4" 
-                                          placeholder="Ingrese observaciones sobre la revisión..."><?= htmlspecialchars($revision['observaciones_mensual'] ?? '') ?></textarea>
-                            </div>
+                                    <div class="mb-3">
+                                        <label class="form-label">Observaciones:</label>
+                                        <textarea name="observaciones" class="form-control" rows="4"><?= htmlspecialchars($revision['observaciones_mensual'] ?? '') ?></textarea>
+                                    </div>
 
-                            <div class="d-flex justify-content-between">
-                                <a href="listado_revisiones_view.php" class="btn btn-outline btn-outline-secondary">
-                                    <i class="bi bi-arrow-left me-2"></i>Volver
-                                </a>
-                                <button type="submit" class="btn btn-outline btn-outline-success">
-                                    <i class="bi bi-check-circle me-2"></i>Guardar Revisión
-                                </button>
-                            </div>
+                                    <div class="d-flex justify-content-between">
+                                        <a href="listado_revisiones_view.php" class="btn btn-outline-secondary">
+                                            <i class="bi bi-arrow-left me-2"></i>Volver
+                                        </a>
+                                        <button type="button" class="btn btn-secondary">
+                                            <i class="bi bi-lock me-2"></i>Formulario Bloqueado
+                                        </button>
+                                    </div>
+                                </fieldset>
+                                
+                            <?php else: ?>
+                                <!-- Formulario normal cuando NO está finalizado -->
+                                <div class="mb-3">
+                                    <label class="form-label">Estado del formulario:</label>
+                                    <select name="estado" class="form-select" required>
+                                        <option value="">Seleccione un estado...</option>
+                                        <option value="aprobado" <?= $revision['formulario_mensual'] === 'aprobado' ? 'selected' : '' ?>>Aprobado</option>
+                                        <option value="rechazado" <?= $revision['formulario_mensual'] === 'rechazado' ? 'selected' : '' ?>>Rechazado</option>
+                                    </select>
+                                </div>
+
+                                <div class="mb-3">
+                                    <label class="form-label">Observaciones:</label>
+                                    <textarea name="observaciones" class="form-control" rows="4" 
+                                            placeholder="Ingrese observaciones sobre la revisión..."><?= htmlspecialchars($revision['observaciones_mensual'] ?? '') ?></textarea>
+                                </div>
+
+                                <div class="d-flex justify-content-between">
+                                    <a href="listado_revisiones_view.php" class="btn btn-outline-secondary">
+                                        <i class="bi bi-arrow-left me-2"></i>Volver
+                                    </a>
+                                    <button type="submit" class="btn btn-success">
+                                        <i class="bi bi-check-circle me-2"></i>Guardar Revisión
+                                    </button>
+                                </div>
+                            <?php endif; ?>
                         </div>
                     </div>
                 </form>

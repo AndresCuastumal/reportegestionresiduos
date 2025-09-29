@@ -17,7 +17,17 @@ if (isset($_GET['id'])) {
     }
 }
 
-include '../../includes/header.php'; // Incluye el encabezado HTML
+// Obtener lista de barrios
+$barrios = $controller->obtenerBarrios();
+// Obtener categorías (sujetos)
+$sujetos = $controller->getTiposGenerador();
+// Obtener subcategorías si estamos editando
+$subcategorias = [];
+if (isset($generadorExistente['sujeto'])) {
+    $subcategorias = $controller->getSubcategoriasPorSujeto($generadorExistente['id_sujeto']);
+}
+
+include '../../includes/header.php';
 ?>
     <!-- Contenedor principal -->
     <div class="container my-4">
@@ -41,7 +51,7 @@ include '../../includes/header.php'; // Incluye el encabezado HTML
         <div class="card mb-4" style="background-color: #f8f4ceff;">
             <div class="card-body">
                 <p class="card-text" style="text-align: justify; text-justify: inter-word;">
-                    Complete la información del establecimiento generador de residuos por atención en salud. 
+                    Complete la información del establecimiento generador de residuos en atención en salud y otras actividades. 
                     Todos los campos marcados con <span class="text-danger">*</span> son obligatorios.
                 </p>
             </div>
@@ -93,7 +103,7 @@ include '../../includes/header.php'; // Incluye el encabezado HTML
                         <h6 class="text-muted border-bottom pb-2 mb-3">Datos del Establecimiento</h6>
                         <div class="row">
                             <div class="col-md-6 mb-3">
-                                <label for="nom_generador" class="form-label">Nombre establecimiento <span class="text-danger">*</span></label>
+                                <label for="nom_generador" class="form-label">Nombre comercial <span class="text-danger">*</span></label>
                                 <input type="text" class="form-control" id="nom_generador" name="nom_generador" 
                                        value="<?= htmlspecialchars($generadorExistente['nom_generador'] ?? '') ?>" required>
                             </div>
@@ -108,21 +118,9 @@ include '../../includes/header.php'; // Incluye el encabezado HTML
                                        value="<?= htmlspecialchars($generadorExistente['nit'] ?? '') ?>" required>
                             </div>
                             <div class="col-md-6 mb-3">
-                                <label for="tipo_sujeto" class="form-label">Tipo <span class="text-danger">*</span></label>
-                                <select class="form-select" id="tipo_sujeto" name="tipo_sujeto" required>
-                                    <option value="">Seleccione...</option>
-                                    <?php 
-                                    $tiposGenerador = $controller->getTiposGenerador();
-                                    $selectedValue = $_POST['tipo_sujeto'] ?? ($generadorExistente['tipo_sujeto'] ?? '');
-                                    
-                                    foreach ($tiposGenerador as $tipo): 
-                                        $selected = ($selectedValue == $tipo['id']) ? 'selected' : '';
-                                    ?>
-                                        <option value="<?= htmlspecialchars($tipo['id']) ?>" <?= $selected ?>>
-                                            <?= htmlspecialchars($tipo['nom_tipo']) ?>
-                                        </option>
-                                    <?php endforeach; ?>
-                                </select>
+                                <label for="tel_establecimiento" class="form-label">Teléfono <span class="text-danger">*</span></label>
+                                <input type="tel" class="form-control" id="tel_establecimiento" name="tel_establecimiento" required
+                                       value="<?= htmlspecialchars($generadorExistente['tel_establecimiento'] ?? '') ?>">
                             </div>
                             <div class="col-md-6 mb-3">
                                 <label class="form-label">Dirección <span class="text-danger">*</span></label>
@@ -140,13 +138,69 @@ include '../../includes/header.php'; // Incluye el encabezado HTML
                                 </small>
                             </div>
                             <div class="col-md-6 mb-3">
-                                <label for="tel_establecimiento" class="form-label">Teléfono</label>
-                                <input type="tel" class="form-control" id="tel_establecimiento" name="tel_establecimiento"
-                                       value="<?= htmlspecialchars($generadorExistente['tel_establecimiento'] ?? '') ?>">
+                                <label for="barrio" class="form-label">Barrio <span class="text-danger">*</span></label>
+                                <select class="form-select" id="barrio" name="id_comuna" required>
+                                    <option value="">Seleccione un barrio...</option>
+                                    <?php 
+                                    $selectedBarrio = $_POST['id_comuna'] ?? ($generadorExistente['id_comuna'] ?? '');
+                                    foreach ($barrios as $barrio): 
+                                        $selected = ($selectedBarrio == $barrio['id']) ? 'selected' : '';
+                                    ?>
+                                        <option value="<?= htmlspecialchars($barrio['id']) ?>" <?= $selected ?>>
+                                            <?= htmlspecialchars($barrio['nom_barrio']) ?>
+                                        </option>
+                                    <?php endforeach; ?>
+                                </select>
+                                <small class="form-text text-muted">
+                                    <i class="bi bi-info-circle"></i> Seleccione el barrio donde se encuentra el establecimiento
+                                </small>
                             </div>
+                            <div class="col-md-6 mb-3">
+                            <label for="id_sujeto" class="form-label">Categoría <span class="text-danger">*</span></label>
+                            <select class="form-select" id="id_sujeto" name="id_sujeto" required>
+                                <option value="">Seleccione...</option>
+                                <?php 
+                                $selectedSujeto = $_POST['id_sujeto'] ?? ($generadorExistente['id_sujeto'] ?? ''); // Cambiado de 'sujeto' a 'id_sujeto'
+                                foreach ($sujetos as $sujeto): 
+                                    $selected = ($selectedSujeto == $sujeto['id_sujeto']) ? 'selected' : '';
+                                ?>
+                                    <option value="<?= htmlspecialchars($sujeto['id_sujeto']) ?>" <?= $selected ?>>
+                                        <?= htmlspecialchars($sujeto['nom_sujeto']) ?>
+                                    </option>
+                                <?php endforeach; ?>
+                            </select>
                         </div>
-                    </div>
-
+                        <div class="col-md-6 mb-3">
+                            <label for="tipo_sujeto" class="form-label">Tipo/Subcategoría <span class="text-danger">*</span></label>
+                            <select class="form-select" id="tipo_sujeto" name="tipo_sujeto" 
+                                    data-selected="<?= htmlspecialchars($generadorExistente['tipo_sujeto'] ?? '') ?>" required>
+                                <option value="">Primero seleccione una categoría</option>
+                                <?php 
+                                $selectedTipo = $_POST['tipo_sujeto'] ?? ($generadorExistente['tipo_sujeto'] ?? '');
+                                foreach ($subcategorias as $subcategoria): 
+                                    $selected = ($selectedTipo == $subcategoria['id']) ? 'selected' : '';
+                                ?>
+                                    <option value="<?= htmlspecialchars($subcategoria['id']) ?>" <?= $selected ?>>
+                                        <?= htmlspecialchars($subcategoria['nom_clase']) ?>
+                                    </option>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
+                         <!-- Después de los selects, antes de cerrar la sección -->
+                        <div class="row mt-3">
+                            <div class="col-12">
+                                <div class="alert alert-light d-flex align-items-center mb-0" role="alert" style="background-color: #e0ebeb;">
+                                    <i class="bi bi-info-circle-fill me-3 fs-4"></i>
+                                    <div class="flex-grow-1">
+                                        <small>¿No está seguro de qué categoría o subcategoría seleccionar?</small>
+                                    </div>
+                                    <button type="button" class="btn btn-secondary btn-sm" onclick="abrirCatalogo()">
+                                        <i class="bi bi-file-earmark-pdf me-1"></i> Ver Catálogo PDF en nueva pestaña
+                                    </button>
+                                </div>
+                            </div>
+                        </div>                           
+                    </div>                
                     <!-- Sección 2: Datos del Responsable -->
                     <div class="mb-4">
                         <h6 class="text-muted border-bottom pb-2 mb-3">Datos del Responsable</h6>
@@ -201,8 +255,18 @@ include '../../includes/header.php'; // Incluye el encabezado HTML
     <!-- Modal para selección de dirección -->
     <?php include '../../includes/direccion.php'; ?>
 
+    <!-- js para el select dependiente -->
+    <script src="../../assets/js/select_dependiente.js"></script>
+
     <!-- js para manejar el formulario y la dirección -->
     <script src="../../assets/js/mostrar_direccion.js"></script>
+
+    <!-- js para abrir el catálogo -->
+    <script>
+        function abrirCatalogo() {
+            window.open('../../includes/sujetos_clases.pdf', '_blank');
+        }
+    </script>
 
     <!-- Footer -->
     <?php include '../../includes/footer.php'; ?>

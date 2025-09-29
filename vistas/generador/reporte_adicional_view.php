@@ -223,6 +223,16 @@ if (!$reporte_bloqueado) {
                             </div>
                             <div class="col-md-6 mb-3">
                                 <label class="form-label">
+                                    Número de empleados capacitados en manejo de residuos
+                                    <span class="text-danger">*</span>
+                                </label>
+                                <input type="number" class="form-control" 
+                                       name="num_empleados_capacitados" 
+                                       min="0" required
+                                       value="<?= $info_adicional['num_empleados_capacitados'] ?? '' ?>" <?= $readonly ?>>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">
                                     Soportes de capacitaciones (PDF)
                                     <?php if (!$info_adicional): ?><span class="text-danger">*</span><?php endif; ?>
                                 </label>
@@ -334,7 +344,7 @@ if (!$reporte_bloqueado) {
                     
                     <!-- SECCIÓN AUDITORIAS -->
                     <div class="info-card mb-4">
-                        <h6><i class="bi bi-search me-2"></i>Auditorías Internas</h6>
+                        <h6><i class="bi bi-search me-2"></i>Auditorías Internas y externas</h6>
                         <p class="text-muted mb-3">
                             Recuerde que las auditorías internas son obligatorias según la normatividad vigente.
                             Asegúrese de haber realizado al menos una auditoría interna sobre la gestión de residuos
@@ -344,7 +354,7 @@ if (!$reporte_bloqueado) {
                         <div class="row">
                             <div class="col-md-6 mb-3">
                                 <label class="form-label">
-                                    Número de auditorías internas realizadas sobre el manejo de residuos sólidos
+                                    Número de auditorías internas y/o externas realizadas sobre el manejo de residuos sólidos
                                     <span class="text-danger">*</span>
                                 </label>
                                 <input type="number" class="form-control" 

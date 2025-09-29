@@ -19,6 +19,7 @@ if (!isset($_GET['generador_id']) || !isset($_GET['anio'])) {
 $generador_id = $_GET['generador_id'];
 $anio = $_GET['anio'];
 
+
 $revisionController = new RevisionesController($conn);
 $accidentesController = new ReporteAccidentesController($conn);
 $mensualController = new ReporteMensualController($conn);
@@ -28,6 +29,13 @@ $revision = $revisionController->obtenerRevision($generador_id, $anio);
 $generador = $mensualController->obtenerDatosGenerador($generador_id);
 $datosReporte = $accidentesController->obtenerDatosReporteAdicional($generador_id, $anio);
 $accionesPreventivas = $accidentesController->obtenerAccionesPreventivas($datosReporte);
+
+// Verificar si la revisión está finalizada
+if ($revisionController->estaFinalizado($generador_id, $anio)) {
+    $_SESSION['warning'] = "Esta revisión ya ha sido finalizada y no puede ser modificada.";
+    header("Location: listado_revisiones_view.php");
+    exit();
+}
 
 // VERIFICAR SI REALMENTE HAY DATOS - NUEVA LÓGICA
 $tieneDatos = $accidentesController->existeRegistro($generador_id, $anio);
@@ -51,7 +59,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         'formulario_accidentes' => $estado,
         'observaciones_accidentes' => $observaciones,
         'revisado_por' => $_SESSION['usuario_id'],
-        'estado_general' => 'incompleto',
+        'estado_general' => 'pendiente',
         'generador_id' => $generador_id,
         'anio' => $anio
     ];
@@ -59,12 +67,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if ($revisionController->actualizarRevisionAccidentes($data)) {
         $_SESSION['success'] = "Revisión de capacitaciones y accidentes actualizada correctamente";
         
-        // Verificar si todos los formularios están aprobados
+        // Determinar a qué formulario redirigir
+        $siguiente_formulario = $revisionController->determinarSiguienteFormulario($generador_id, $anio);
+        
+        // Verificar si todos están aprobados
         if ($revisionController->verificarFormulariosCompletos($generador_id, $anio)) {
-            $_SESSION['info'] = "Todos los formularios están aprobados. Se enviará el certificado.";
+            $_SESSION['info'] = "¡Todos los formularios han sido aprobados!";
         }
         
-        header("Location: listado_revisiones_view.php");
+        header("Location: $siguiente_formulario");
         exit();
     } else {
         $_SESSION['error'] = "Error al actualizar la revisión";
@@ -160,6 +171,7 @@ include '../../includes/header.php';
                         <div class="col-md-6">
                             <p><strong>Capacitaciones ejecutadas:</strong> <?= $datosReporte['num_capacitaciones_ejecutadas'] ?></p>
                             <?php if ($datosReporte['archivo_soportes_capacitaciones']): ?>
+                            <p><strong>Número de personas capacitadas:</strong> <?= $datosReporte['num_empleados_capacitados'] ?></p>
                             <p><strong>Soportes:</strong> 
                                 <a href="../../procesos/uploads/soportes_anuales/<?= $datosReporte['archivo_soportes_capacitaciones'] ?>" 
                                    target="_blank" class="btn btn-sm btn-outline btn-outline-primary">
@@ -245,41 +257,50 @@ include '../../includes/header.php';
                             <h6 class="mb-0"><i class="bi bi-clipboard-check me-2"></i>Evaluación del Administrador</h6>
                         </div>
                         <div class="card-body">
-                            <?php if (!$tieneDatos): ?>
-                                <!-- Mostrar mensaje cuando no hay datos -->
-                                <div class="alert alert-info">
-                                    <i class="bi bi-info-circle me-2"></i>
-                                    Este formulario no tiene datos registrados. No es posible realizar la revisión.
+                            <?php if ($revisionController->estaFinalizado($generador_id, $anio)): ?>
+                                <!-- ⭐ NUEVO: Mostrar alerta cuando está finalizado -->
+                                <div class="alert alert-warning">
+                                    <i class="bi bi-lock-fill me-2"></i>
+                                    <strong>Revisión Finalizada</strong> - Esta revisión ya ha sido completada y no puede ser modificada.
+                                    <?php if ($revision['estado_general'] === 'aprobado'): ?>
+                                        El certificado fue enviado al generador.
+                                    <?php else: ?>
+                                        Las observaciones fueron enviadas al generador.
+                                    <?php endif; ?>
                                 </div>
                                 
                                 <!-- Campos deshabilitados -->
-                                <div class="mb-3">
-                                    <label class="form-label">Estado del formulario:</label>
-                                    <select name="estado" class="form-select" disabled>
-                                        <option value="sin_datos" selected>Sin datos</option>
-                                    </select>
-                                </div>
+                                <fieldset disabled>
+                                    <div class="mb-3">
+                                        <label class="form-label">Estado del formulario:</label>
+                                        <select name="estado" class="form-select">
+                                            <option value="<?= $revision['formulario_accidentes'] ?>" selected>
+                                                <?= ucfirst($revision['formulario_accidentes']) ?>
+                                            </option>
+                                        </select>
+                                    </div>
 
-                                <div class="mb-3">
-                                    <label class="form-label">Observaciones:</label>
-                                    <textarea name="observaciones" class="form-control" rows="4" 
-                                            placeholder="No se pueden agregar observaciones sin datos..." disabled></textarea>
-                                </div>
+                                    <div class="mb-3">
+                                        <label class="form-label">Observaciones:</label>
+                                        <textarea name="observaciones" class="form-control" rows="4"><?= htmlspecialchars($revision['observaciones_accidentes'] ?? '') ?></textarea>
+                                    </div>
 
-                                <div class="d-flex justify-content-between">
-                                    <a href="listado_revisiones_view.php" class="btn btn-outline-secondary">
-                                        <i class="bi bi-arrow-left me-2"></i>Volver
-                                    </a>
-                                    <button type="button" class="btn btn-secondary" disabled>
-                                        <i class="bi bi-lock me-2"></i>Formulario Bloqueado
-                                    </button>
-                                </div>
+                                    <div class="d-flex justify-content-between">
+                                        <a href="listado_revisiones_view.php" class="btn btn-outline-secondary">
+                                            <i class="bi bi-arrow-left me-2"></i>Volver
+                                        </a>
+                                        <button type="button" class="btn btn-secondary">
+                                            <i class="bi bi-lock me-2"></i>Formulario Bloqueado
+                                        </button>
+                                    </div>
+                                </fieldset>
+                                
                             <?php else: ?>
-                                <!-- Formulario normal cuando hay datos -->
+                                <!-- Formulario normal cuando hay datos y NO está finalizado -->
                                 <div class="mb-3">
                                     <label class="form-label">Estado del formulario:</label>
                                     <select name="estado" class="form-select" required>
-                                        <option value="pendiente" <?= $revision['formulario_accidentes'] === 'pendiente' ? 'selected' : '' ?>>Pendiente</option>
+                                        <option value="">Seleccione un estado...</option>
                                         <option value="aprobado" <?= $revision['formulario_accidentes'] === 'aprobado' ? 'selected' : '' ?>>Aprobado</option>
                                         <option value="rechazado" <?= $revision['formulario_accidentes'] === 'rechazado' ? 'selected' : '' ?>>Rechazado</option>
                                     </select>

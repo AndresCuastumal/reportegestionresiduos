@@ -28,6 +28,13 @@ $revision = $revisionController->obtenerRevision($generador_id, $anio);
 $generador = $mensualController->obtenerDatosGenerador($generador_id);
 $datosContingencias = $contingenciasController->obtenerDatosContingencias($generador_id, $anio);
 
+// Verificar si la revisión está finalizada
+if ($revisionController->estaFinalizado($generador_id, $anio)) {
+    $_SESSION['warning'] = "Esta revisión ya ha sido finalizada y no puede ser modificada.";
+    header("Location: listado_revisiones_view.php");
+    exit();
+}
+
 // Obtener listas de acciones
 $accionesIncendios = $contingenciasController->obtenerAccionesIncendios();
 $accionesAgua = $contingenciasController->obtenerAccionesAgua();
@@ -54,7 +61,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         'formulario_contingencias' => $estado,
         'observaciones_contingencias' => $observaciones,
         'revisado_por' => $_SESSION['usuario_id'],
-        'estado_general' => 'incompleto',
+        'estado_general' => 'pendiente',
         'generador_id' => $generador_id,
         'anio' => $anio
     ];
@@ -62,12 +69,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if ($revisionController->actualizarRevisionContingencias($data)) {
         $_SESSION['success'] = "Revisión del plan de contingencias actualizada correctamente";
         
-        // Verificar si todos los formularios están aprobados
+        // Determinar a qué formulario redirigir
+        $siguiente_formulario = $revisionController->determinarSiguienteFormulario($generador_id, $anio);
+        
+        // Verificar si todos están aprobados para mostrar mensaje especial
         if ($revisionController->verificarFormulariosCompletos($generador_id, $anio)) {
-            $_SESSION['info'] = "Todos los formularios están aprobados. Se enviará el certificado.";
+            $_SESSION['info'] = "¡Todos los formularios han sido aprobados! Se procederá con la generación del certificado.";
+        } else {
+            $_SESSION['info'] = "Revisión completada. Estado general actualizado.";
         }
         
-        header("Location: listado_revisiones_view.php");
+        header("Location: $siguiente_formulario");
         exit();
     } else {
         $_SESSION['error'] = "Error al actualizar la revisión";
@@ -335,8 +347,9 @@ include '../../includes/header.php';
                 <?php endif; ?>
 
                 <?php 
-                // Determinar si el formulario tiene datos
-                $formulario_sin_datos = ($revision['formulario_contingencias'] === 'sin_datos') || empty($datosContingencias);
+                // Determinar si el formulario tiene datos de manera más precisa
+                $tiene_datos_contingencias = $contingenciasController->existeRegistro($generador_id, $anio);
+                $formulario_sin_datos = !$tiene_datos_contingencias || ($revision['formulario_contingencias'] === 'sin_datos');
                 ?>
 
                 <!-- Formulario de revisión -->
@@ -353,7 +366,11 @@ include '../../includes/header.php';
                                 <!-- Mostrar mensaje cuando no hay datos -->
                                 <div class="alert alert-info">
                                     <i class="bi bi-info-circle me-2"></i>
-                                    Este formulario no tiene datos registrados. No es posible realizar la revisión.
+                                    <?php if (!$tiene_datos_contingencias): ?>
+                                        No se encontraron datos de contingencias reportados para este año.
+                                    <?php else: ?>
+                                        Este formulario está marcado como "sin datos". No es posible realizar la revisión.
+                                    <?php endif; ?>
                                 </div>
                                 
                                 <!-- Campos deshabilitados -->
@@ -362,6 +379,7 @@ include '../../includes/header.php';
                                     <select name="estado" class="form-select" disabled>
                                         <option value="sin_datos" selected>Sin datos</option>
                                     </select>
+                                    <input type="hidden" name="estado" value="sin_datos">
                                 </div>
 
                                 <div class="mb-3">
@@ -372,7 +390,7 @@ include '../../includes/header.php';
 
                                 <div class="d-flex justify-content-between">
                                     <a href="listado_revisiones_view.php" class="btn btn-outline-secondary">
-                                        <i class="bi bi-arrow-left me-2"></i>Volver
+                                        <i class="bi bi-arrow-left me-2"></i>Volver al Listado
                                     </a>
                                     <button type="button" class="btn btn-secondary" disabled>
                                         <i class="bi bi-lock me-2"></i>Formulario Bloqueado
@@ -383,7 +401,7 @@ include '../../includes/header.php';
                                 <div class="mb-3">
                                     <label class="form-label">Estado del formulario:</label>
                                     <select name="estado" class="form-select" required>
-                                        <option value="pendiente" <?= $revision['formulario_contingencias'] === 'pendiente' ? 'selected' : '' ?>>Pendiente</option>
+                                        <option value="">Seleccione un estado...</option>
                                         <option value="aprobado" <?= $revision['formulario_contingencias'] === 'aprobado' ? 'selected' : '' ?>>Aprobado</option>
                                         <option value="rechazado" <?= $revision['formulario_contingencias'] === 'rechazado' ? 'selected' : '' ?>>Rechazado</option>
                                     </select>
@@ -396,11 +414,18 @@ include '../../includes/header.php';
                                 </div>
 
                                 <div class="d-flex justify-content-between">
-                                    <a href="listado_revisiones_view.php" class="btn btn-outline-secondary">
-                                        <i class="bi bi-arrow-left me-2"></i>Volver
-                                    </a>
+                                    <div>
+                                        <a href="revisar_formulario_accidentes.php?generador_id=<?= $generador_id ?>&anio=<?= $anio ?>" 
+                                        class="btn btn-outline-primary me-2">
+                                            <i class="bi bi-skip-backward me-2"></i>Volver a Accidentes
+                                        </a>
+                                        <a href="listado_revisiones_view.php" class="btn btn-outline-secondary">
+                                            <i class="bi bi-arrow-left me-2"></i>Volver al Listado
+                                        </a>
+                                    </div>
+                                    
                                     <button type="submit" class="btn btn-success">
-                                        <i class="bi bi-check-circle me-2"></i>Guardar Revisión
+                                        <i class="bi bi-check-circle me-2"></i>Guardar y Finalizar
                                     </button>
                                 </div>
                             <?php endif; ?>

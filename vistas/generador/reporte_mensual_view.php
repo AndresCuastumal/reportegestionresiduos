@@ -211,7 +211,7 @@ if(isset($contingencia) && is_array($contingencia) && isset($contingencia['estad
                     </div>
                     
                     <!-- Datos del reporte mensual en 2 columnas -->
-                    <h6 class="text-muted mb-3">Cantidad de Residuos por Mes (kg)</h6>
+                    <h6 class="text-muted mb-3">Cantidad de residuos peligrosos por mes (kg)</h6>
                     <div class="meses-grid">
                         <?php
                         $meses = [

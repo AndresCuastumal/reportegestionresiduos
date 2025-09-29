@@ -32,8 +32,16 @@ class RevisionesController {
         return $stmt->fetch(PDO::FETCH_ASSOC);
     }
     
-    // Actualizar estado de revisión
+    // Actualizar estado de revisión del formulario mensual
     public function actualizarRevision($data) {
+        // Verificar si está finalizado
+        if ($this->estaFinalizado($data['generador_id'], $data['anio'])) {
+            throw new Exception("Esta revisión ya ha sido finalizada y no puede ser modificada.");
+        }
+        
+        // Asegurar que el registro exista
+        $this->crearRevisionSiNoExiste($data['generador_id'], $data['anio']);
+        
         $stmt = $this->conn->prepare("
             UPDATE revisiones_anuales 
             SET formulario_mensual = ?, 
@@ -44,7 +52,7 @@ class RevisionesController {
             WHERE generador_id = ? AND anio = ?
         ");
         
-        return $stmt->execute([
+        $success = $stmt->execute([
             $data['formulario_mensual'],
             $data['observaciones_mensual'],
             $data['revisado_por'],
@@ -52,10 +60,92 @@ class RevisionesController {
             $data['generador_id'],
             $data['anio']
         ]);
+        
+        if ($success) {
+            // Actualizar el estado general automáticamente
+            $this->actualizarEstadoGeneralAutomatico($data['generador_id'], $data['anio']);
+            
+            // Verificar si es el último formulario y enviar notificaciones
+            $this->verificarYEnviarNotificaciones($data['generador_id'], $data['anio']);
+        }
+        
+        return $success;
     }
 
-     // Actualizar estado de revisión de accidentes
+    // Verificar y enviar notificaciones si corresponde
+    // Verificar y enviar notificaciones si corresponde - CON MÁS DEBUG
+    private function verificarYEnviarNotificaciones($generador_id, $anio) {
+        error_log("🎯 === VERIFICANDO NOTIFICACIONES ===");
+        error_log("🎯 Llamado desde: " . debug_backtrace()[1]['function']);
+        error_log("🎯 Para: generador_id=$generador_id, anio=$anio");
+        
+        $estados = $this->obtenerEstadoFormularios($generador_id, $anio);
+        error_log("🎯 Estados actuales: " . print_r($estados, true));
+        
+        // Solo enviar notificaciones si todos los formularios tienen estado definitivo
+        $todosRevisados = (
+            $estados['formulario_mensual'] !== 'pendiente' && 
+            $estados['formulario_mensual'] !== 'sin_datos' &&
+            $estados['formulario_accidentes'] !== 'pendiente' && 
+            $estados['formulario_accidentes'] !== 'sin_datos' &&
+            $estados['formulario_contingencias'] !== 'pendiente' && 
+            $estados['formulario_contingencias'] !== 'sin_datos'
+        );
+        
+        error_log("🎯 ¿Todos revisados?: " . ($todosRevisados ? '✅ SÍ' : '❌ NO'));
+        
+        if ($todosRevisados) {
+            error_log("🎯 🚀 EJECUTANDO enviarNotificaciones...");
+            $this->enviarNotificaciones($generador_id, $anio);
+        } else {
+            error_log("🎯 ⏳ Aún no están todos revisados.");
+            error_log("🎯 - Mensual: " . $estados['formulario_mensual']);
+            error_log("🎯 - Accidentes: " . $estados['formulario_accidentes']); 
+            error_log("🎯 - Contingencias: " . $estados['formulario_contingencias']);
+        }
+        
+        error_log("🎯 === FIN VERIFICACIÓN ===");
+    }
+    // Actualizar estado general automáticamente
+    public function actualizarEstadoGeneralAutomatico($generador_id, $anio) {
+        $estados = $this->obtenerEstadoFormularios($generador_id, $anio);
+        
+        $estado_general = $this->calcularEstadoGeneral(
+            $estados['formulario_mensual'],
+            $estados['formulario_accidentes'],
+            $estados['formulario_contingencias']
+        );
+        
+        $this->actualizarEstadoGeneral($generador_id, $anio, $estado_general);
+    }
+
+    // Calcular estado general basado en los tres formularios
+    private function calcularEstadoGeneral($mensual, $accidentes, $contingencias) {
+        if ($mensual === 'rechazado' || $accidentes === 'rechazado' || $contingencias === 'rechazado') {
+            return 'rechazado';
+        }
+        
+        if ($mensual === 'aprobado' && $accidentes === 'aprobado' && $contingencias === 'aprobado') {
+            return 'aprobado';
+        }
+        
+        return 'pendiente';
+    }
+
+    // Actualizar estado de revisión de accidentes - CORREGIDO
     public function actualizarRevisionAccidentes($data) {
+        error_log("=== ACTUALIZANDO ACCIDENTES VIA WEB ===");
+        error_log("Datos recibidos: " . print_r($data, true));
+        
+        // Verificar si está finalizado
+        if ($this->estaFinalizado($data['generador_id'], $data['anio'])) {
+            error_log("❌ Ya está finalizado, no se puede modificar");
+            throw new Exception("Esta revisión ya ha sido finalizada y no puede ser modificada.");
+        }
+        
+        // Asegurar que el registro exista
+        $this->crearRevisionSiNoExiste($data['generador_id'], $data['anio']);
+        
         $stmt = $this->conn->prepare("
             UPDATE revisiones_anuales 
             SET formulario_accidentes = ?, 
@@ -66,7 +156,7 @@ class RevisionesController {
             WHERE generador_id = ? AND anio = ?
         ");
         
-        return $stmt->execute([
+        $success = $stmt->execute([
             $data['formulario_accidentes'],
             $data['observaciones_accidentes'],
             $data['revisado_por'],
@@ -74,9 +164,34 @@ class RevisionesController {
             $data['generador_id'],
             $data['anio']
         ]);
+        
+        if ($success) {
+            error_log("✅ Actualización de accidentes exitosa");
+            // Actualizar el estado general automáticamente
+            $this->actualizarEstadoGeneralAutomatico($data['generador_id'], $data['anio']);
+            
+            // ✅ NUEVO: Verificar si es el último formulario y enviar notificaciones
+            $this->verificarYEnviarNotificaciones($data['generador_id'], $data['anio']);
+        } else {
+            error_log("❌ Error en la actualización de accidentes");
+        }
+        
+        return $success;
     }
-        // Actualizar estado de revisión de contingencias
+    // Actualizar estado de revisión del formulario de contingencias - CORREGIDO
     public function actualizarRevisionContingencias($data) {
+        error_log("=== ACTUALIZANDO CONTINGENCIAS VIA WEB ===");
+        error_log("Datos recibidos: " . print_r($data, true));
+        
+        // Verificar si está finalizado
+        if ($this->estaFinalizado($data['generador_id'], $data['anio'])) {
+            error_log("❌ Ya está finalizado, no se puede modificar");
+            throw new Exception("Esta revisión ya ha sido finalizada y no puede ser modificada.");
+        }
+        
+        // Asegurar que el registro exista
+        $this->crearRevisionSiNoExiste($data['generador_id'], $data['anio']);
+        
         $stmt = $this->conn->prepare("
             UPDATE revisiones_anuales 
             SET formulario_contingencias = ?, 
@@ -87,7 +202,7 @@ class RevisionesController {
             WHERE generador_id = ? AND anio = ?
         ");
         
-        return $stmt->execute([
+        $success = $stmt->execute([
             $data['formulario_contingencias'],
             $data['observaciones_contingencias'],
             $data['revisado_por'],
@@ -95,6 +210,19 @@ class RevisionesController {
             $data['generador_id'],
             $data['anio']
         ]);
+        
+        if ($success) {
+            error_log("✅ Actualización de contingencias exitosa");
+            // Actualizar el estado general automáticamente
+            $this->actualizarEstadoGeneralAutomatico($data['generador_id'], $data['anio']);
+            
+            // ✅ NUEVO: Verificar si es el último formulario y enviar notificaciones
+            $this->verificarYEnviarNotificaciones($data['generador_id'], $data['anio']);
+        } else {
+            error_log("❌ Error en la actualización de contingencias");
+        }
+        
+        return $success;
     }
     
     // Verificar si todos los formularios están aprobados
@@ -128,14 +256,23 @@ class RevisionesController {
             $anio
         ]);
     }
-    // Obtener revisiones con filtros
+      
+    // Obtener revisiones con filtros - SOLO para generadores que reportaron datos en 2024
     public function obtenerRevisionesConFiltros($tipo_sujeto = '', $estado_general = '') {
         $sql = "
-            SELECT r.*, g.nom_generador, g.nom_responsable, g.tipo_sujeto, s.nom_tipo
+            SELECT 
+                r.*, 
+                g.nom_generador, 
+                g.nom_responsable, 
+                g.tipo_sujeto, 
+                s.nom_clase AS nom_tipo
             FROM revisiones_anuales r
             JOIN generador g ON r.generador_id = g.id
-            JOIN tipo_generador s ON g.tipo_sujeto = s.id
-            WHERE 1=1
+            JOIN subcategoria s ON g.tipo_sujeto = s.id
+            WHERE r.anio = 2024  -- Solo año 2024
+            AND r.formulario_mensual != 'sin_datos'  -- Excluir sin datos
+            AND r.formulario_accidentes != 'sin_datos' 
+            AND r.formulario_contingencias != 'sin_datos'
         ";
         
         $params = [];
@@ -150,21 +287,41 @@ class RevisionesController {
             $params[] = $estado_general;
         }
         
-        $sql .= " ORDER BY r.fecha_revision DESC";
+        $sql .= " ORDER BY g.nom_generador ASC, r.fecha_revision DESC";
         
         $stmt = $this->conn->prepare($sql);
         $stmt->execute($params);
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
-    
+    // Verificar si existe registro de revisión para un generador y año
+    public function existeRevision($generador_id, $anio) {
+        $stmt = $this->conn->prepare("
+            SELECT COUNT(*) 
+            FROM revisiones_anuales 
+            WHERE generador_id = ? AND anio = ?
+        ");
+        $stmt->execute([$generador_id, $anio]);
+        return $stmt->fetchColumn() > 0;
+    }
+    // Crear registro de revisión si no existe
+    public function crearRevisionSiNoExiste($generador_id, $anio) {
+        if (!$this->existeRevision($generador_id, $anio)) {
+            $stmt = $this->conn->prepare("
+                INSERT INTO revisiones_anuales (generador_id, anio, estado_general)
+                VALUES (?, ?, 'pendiente')
+            ");
+            return $stmt->execute([$generador_id, $anio]);
+        }
+        return true;
+    }
     // Obtener tipos de sujeto únicos para el filtro
     public function obtenerTiposSujeto() {
         $stmt = $this->conn->prepare("
-            SELECT DISTINCT g.tipo_sujeto, s.nom_tipo 
+            SELECT DISTINCT g.tipo_sujeto, s.nom_clase AS nom_tipo 
             FROM generador g
-            JOIN tipo_generador s ON g.tipo_sujeto = s.id 
+            JOIN subcategoria s ON g.tipo_sujeto = s.id 
             WHERE g.tipo_sujeto IS NOT NULL 
-            ORDER BY s.nom_tipo ASC
+            ORDER BY nom_tipo ASC
         ");
         $stmt->execute();
         
@@ -244,6 +401,311 @@ class RevisionesController {
         $resultado = $stmt->fetch(PDO::FETCH_ASSOC);
         
         return $resultado[$campo_formulario] ?? 'pendiente';
+    }
+
+    // Determinar a qué formulario redirigir después de guardar
+    public function determinarSiguienteFormulario($generador_id, $anio) {
+        // Obtener el estado actual de todos los formularios
+        $estados = $this->obtenerEstadoFormularios($generador_id, $anio);
+        
+        // Debug: Ver qué estados estamos obteniendo (eliminar en producción)
+        error_log("Estados formularios - Mensual: " . $estados['formulario_mensual'] . 
+                ", Accidentes: " . $estados['formulario_accidentes'] . 
+                ", Contingencias: " . $estados['formulario_contingencias']);
+        
+        // Lógica de redirección basada en los estados
+        
+        // Si el formulario de accidentes está pendiente, ir allí
+        if ($estados['formulario_accidentes'] === 'pendiente' || 
+            $estados['formulario_accidentes'] === 'sin_datos') {
+            return "revisar_formulario_accidentes.php?generador_id=$generador_id&anio=$anio";
+        }
+        
+        // Si accidentes está revisado pero contingencias está pendiente
+        if (($estados['formulario_accidentes'] === 'aprobado' || $estados['formulario_accidentes'] === 'rechazado') && 
+            ($estados['formulario_contingencias'] === 'pendiente' || $estados['formulario_contingencias'] === 'sin_datos')) {
+            return "revisar_formulario_contingencias.php?generador_id=$generador_id&anio=$anio";
+        }
+        
+        // Si todos los formularios han sido revisados
+        if (($estados['formulario_mensual'] === 'aprobado' || $estados['formulario_mensual'] === 'rechazado') &&
+            ($estados['formulario_accidentes'] === 'aprobado' || $estados['formulario_accidentes'] === 'rechazado') &&
+            ($estados['formulario_contingencias'] === 'aprobado' || $estados['formulario_contingencias'] === 'rechazado')) {
+            
+            // Verificar si todos están aprobados
+            if ($this->verificarFormulariosCompletos($generador_id, $anio)) {
+                // Aquí podrías agregar lógica para generar el certificado
+                error_log("Todos los formularios aprobados para generador $generador_id, año $anio");
+            }
+            
+            return "listado_revisiones_view.php";
+        }
+        
+        // Por defecto, volver al listado
+        return "listado_revisiones_view.php";
+    }
+    // Obtener datos básicos del generador
+    public function obtenerDatosGenerador($generador_id) {
+        $stmt = $this->conn->prepare("
+            SELECT id, nom_generador, nit, dir_establecimiento, tipo_sujeto, nom_responsable
+            FROM generador
+            WHERE id = ?
+        ");
+        $stmt->execute([$generador_id]);
+        return $stmt->fetch(PDO::FETCH_ASSOC);
+    }
+
+    // Obtener el estado de los tres formularios para un generador y año específico
+    public function obtenerEstadoFormularios($generador_id, $anio) {
+        $stmt = $this->conn->prepare("
+            SELECT 
+                formulario_mensual,
+                formulario_accidentes, 
+                formulario_contingencias,
+                estado_general
+            FROM revisiones_anuales 
+            WHERE generador_id = ? AND anio = ?
+        ");
+        $stmt->execute([$generador_id, $anio]);
+        $resultado = $stmt->fetch(PDO::FETCH_ASSOC);
+        
+        // Si no existe el registro, devolver estados por defecto
+        if (!$resultado) {
+            return [
+                'formulario_mensual' => 'sin_datos',
+                'formulario_accidentes' => 'sin_datos',
+                'formulario_contingencias' => 'sin_datos',
+                'estado_general' => 'sin_datos'
+            ];
+        }
+        
+        // Asegurar que los valores no sean nulos
+        return [
+            'formulario_mensual' => $resultado['formulario_mensual'] ?? 'sin_datos',
+            'formulario_accidentes' => $resultado['formulario_accidentes'] ?? 'sin_datos',
+            'formulario_contingencias' => $resultado['formulario_contingencias'] ?? 'sin_datos',
+            'estado_general' => $resultado['estado_general'] ?? 'sin_datos'
+        ];
+    }
+    // En el método enviarNotificaciones - RUTAS CORREGIDAS
+    public function enviarNotificaciones($generador_id, $anio) {
+        error_log("=== INICIANDO ENVIO DE NOTIFICACIONES ===");
+        error_log("Directorio actual: " . __DIR__);
+        
+        // RUTAS ABSOLUTAS CORRECTAS
+        $pdfControllerPath = __DIR__ . '/certificado_pdf_controller.php';
+        $emailControllerPath = __DIR__ . '/email_controller.php';
+        
+        error_log("Buscando archivos:");
+        error_log(" - PDF: $pdfControllerPath");
+        error_log(" - Email: $emailControllerPath");
+        error_log(" - ¿Existe PDF?: " . (file_exists($pdfControllerPath) ? 'SÍ' : 'NO'));
+        error_log(" - ¿Existe Email?: " . (file_exists($emailControllerPath) ? 'SÍ' : 'NO'));
+        
+        // Si no existen en esta ruta, probar rutas alternativas
+        if (!file_exists($pdfControllerPath)) {
+            error_log("⚠️ Probando rutas alternativas...");
+            
+            // Intentar con diferentes rutas posibles
+            $rutas_alternativas = [
+                __DIR__ . '/../../procesos/admin/certificado_pdf_controller.php',
+                dirname(__DIR__) . '/procesos/admin/certificado_pdf_controller.php',
+                'C:/xampp/htdocs/reportegestionresiduos/procesos/admin/certificado_pdf_controller.php'
+            ];
+            
+            foreach ($rutas_alternativas as $ruta) {
+                if (file_exists($ruta)) {
+                    $pdfControllerPath = $ruta;
+                    error_log("✅ Encontrado en: $ruta");
+                    break;
+                }
+            }
+        }
+        
+        if (!file_exists($pdfControllerPath) || !file_exists($emailControllerPath)) {
+            error_log("❌ ERROR: Archivos de controlador no encontrados");
+            error_log("❌ PDF: " . (file_exists($pdfControllerPath) ? 'EXISTE' : 'NO EXISTE'));
+            error_log("❌ Email: " . (file_exists($emailControllerPath) ? 'EXISTE' : 'NO EXISTE'));
+            return false;
+        }
+        
+        error_log("✅ Cargando controladores...");
+        
+        require_once $pdfControllerPath;
+        require_once $emailControllerPath;
+        
+        $pdfController = new CertificadoPdfController($this->conn);
+        $emailController = new EmailController($this->conn);
+        
+        $estados = $this->obtenerEstadoFormularios($generador_id, $anio);
+        $observaciones = $this->obtenerObservaciones($generador_id, $anio);
+
+        // Variable para guardar el nombre del PDF
+        $nombre_pdf_generado = null;
+        
+        error_log("Estados para notificación: " . print_r($estados, true));
+        error_log("Observaciones: " . ($observaciones ? 'SÍ' : 'NO'));
+        
+         // Si todos están aprobados, enviar certificado
+        if ($this->verificarFormulariosCompletos($generador_id, $anio)) {
+            error_log("✅ TODOS APROBADOS - Generando certificado...");
+            
+            try {
+                // Generar PDF
+                $nombre_pdf = $pdfController->generarCertificadoAprobacion($generador_id, $anio);
+                $ruta_pdf = "../../procesos/uploads/certificados/" . $nombre_pdf;
+                
+                // Guardar el nombre del PDF para la base de datos
+                $nombre_pdf_generado = $nombre_pdf;
+                
+                error_log("PDF generado: " . $nombre_pdf);
+                error_log("Ruta PDF: " . $ruta_pdf);
+                
+                // Verificar si el PDF se creó
+                if (!file_exists($ruta_pdf)) {
+                    error_log("❌ ERROR: El PDF no se creó correctamente");
+                } else {
+                    error_log("✅ PDF verificado correctamente");
+                }
+                
+                // Enviar email con certificado
+                $email_enviado = $emailController->enviarCertificadoAprobacion($generador_id, $anio, $ruta_pdf);
+                error_log("Email enviado: " . ($email_enviado ? '✅ SÍ' : '❌ NO'));
+                
+                // Marcar como finalizado CON EL NOMBRE DEL PDF
+                $finalizado = $this->marcarComoFinalizado($generador_id, $anio, $nombre_pdf_generado);
+                error_log("Marcado como finalizado: " . ($finalizado ? '✅ SÍ' : '❌ NO'));
+                
+                
+            } catch (Exception $e) {
+                error_log("❌ ERROR en generación de certificado: " . $e->getMessage());
+                // Marcar como finalizado incluso si hay error (pero sin PDF)
+                $this->marcarComoFinalizado($generador_id, $anio);
+            }
+            
+        } 
+        // Si hay algún rechazo, enviar notificación de correcciones
+        elseif ($estados['formulario_mensual'] === 'rechazado' || 
+                $estados['formulario_accidentes'] === 'rechazado' || 
+                $estados['formulario_contingencias'] === 'rechazado') {
+            
+            error_log("⚠️ HAY RECHAZOS - Enviando notificación...");
+            
+            try {
+                $email_enviado = $emailController->enviarNotificacionRechazo($generador_id, $anio, $observaciones);
+                error_log("Email de rechazo enviado: " . ($email_enviado ? '✅ SÍ' : '❌ NO'));
+                
+                // También marcar como finalizado en caso de rechazo (sin PDF)
+                $finalizado = $this->marcarComoFinalizado($generador_id, $anio);
+                error_log("Marcado como finalizado por rechazo: " . ($finalizado ? '✅ SÍ' : '❌ NO'));
+                
+            } catch (Exception $e) {
+                error_log("❌ ERROR en envío de notificación de rechazo: " . $e->getMessage());
+            }
+        } else {
+            error_log("❓ Estado no reconocido para notificación");
+        }
+        
+        error_log("=== FINALIZANDO ENVIO DE NOTIFICACIONES ===");
+    }
+
+    // Obtener todas las observaciones para el rechazo
+    private function obtenerObservaciones($generador_id, $anio) {
+        $stmt = $this->conn->prepare("
+            SELECT observaciones_mensual, observaciones_accidentes, observaciones_contingencias
+            FROM revisiones_anuales 
+            WHERE generador_id = ? AND anio = ?
+        ");
+        $stmt->execute([$generador_id, $anio]);
+        $resultado = $stmt->fetch(PDO::FETCH_ASSOC);
+        
+        $observaciones = [];
+        
+        if (!empty($resultado['observaciones_mensual'])) {
+            $observaciones[] = "Reporte Mensual: " . $resultado['observaciones_mensual'];
+        }
+        
+        if (!empty($resultado['observaciones_accidentes'])) {
+            $observaciones[] = "Capacitaciones y Accidentes: " . $resultado['observaciones_accidentes'];
+        }
+        
+        if (!empty($resultado['observaciones_contingencias'])) {
+            $observaciones[] = "Plan de Contingencias: " . $resultado['observaciones_contingencias'];
+        }
+        
+        return implode("\n\n", $observaciones);
+    }
+
+    // Marcar revisión como finalizada (bloquear ediciones)
+    // Marcar revisión como finalizada (bloquear ediciones) - CORREGIDO
+    private function marcarComoFinalizado($generador_id, $anio, $nombre_pdf = null) {
+        error_log("Intentando marcar como finalizado: generador_id=$generador_id, anio=$anio");
+        error_log("PDF a guardar: " . ($nombre_pdf ?: 'Ninguno'));
+        
+        $sql = "
+            UPDATE revisiones_anuales 
+            SET estado_finalizado = 1,
+                fecha_finalizacion = NOW(),
+                certificado_generado = 1
+        ";
+        
+        // Si hay un PDF, agregar el campo soporte_pdf
+        if ($nombre_pdf) {
+            $sql .= ", soporte_pdf = ?";
+            $params = [$nombre_pdf, $generador_id, $anio];
+        } else {
+            $params = [$generador_id, $anio];
+        }
+        
+        $sql .= " WHERE generador_id = ? AND anio = ?";
+        
+        $stmt = $this->conn->prepare($sql);
+        $resultado = $stmt->execute($params);
+        $filas_afectadas = $stmt->rowCount();
+        
+        error_log("Resultado update: " . ($resultado ? 'true' : 'false'));
+        error_log("Filas afectadas: " . $filas_afectadas);
+        
+        // Verificar que se actualizó correctamente
+        if ($resultado && $filas_afectadas > 0) {
+            error_log("✅ Revisión marcada como finalizada correctamente");
+            if ($nombre_pdf) {
+                error_log("✅ PDF guardado en base de datos: $nombre_pdf");
+            }
+        } else {
+            error_log("❌ Error al marcar como finalizado");
+        }
+        
+        return $resultado;
+    }
+
+    // Verificar si la revisión está finalizada (bloqueada)
+    public function estaFinalizado($generador_id, $anio) {
+        $stmt = $this->conn->prepare("
+            SELECT estado_finalizado 
+            FROM revisiones_anuales 
+            WHERE generador_id = ? AND anio = ?
+        ");
+        $stmt->execute([$generador_id, $anio]);
+        $resultado = $stmt->fetch(PDO::FETCH_ASSOC);
+        
+        return $resultado && $resultado['estado_finalizado'] == 1;
+    }   
+    
+    // Método de debug temporal
+    public function debugEstadoFinalizado($generador_id, $anio) {
+        $stmt = $this->conn->prepare("
+            SELECT estado_finalizado, fecha_finalizacion, certificado_generado, estado_general,
+                formulario_mensual, formulario_accidentes, formulario_contingencias
+            FROM revisiones_anuales 
+            WHERE generador_id = ? AND anio = ?
+        ");
+        $stmt->execute([$generador_id, $anio]);
+        $resultado = $stmt->fetch(PDO::FETCH_ASSOC);
+        
+        error_log("DEBUG - Estado finalizado para $generador_id, $anio: " . print_r($resultado, true));
+        
+        return $resultado;
     }
 }
 ?>

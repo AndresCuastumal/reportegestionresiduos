@@ -83,6 +83,7 @@ try {
                 num_capacitaciones_programadas = ?,
                 archivo_cronograma = ?,
                 num_capacitaciones_ejecutadas = ?,
+                num_empleados_capacitados = ?,
                 archivo_soportes_capacitaciones = ?,
                 tiene_accidentes = ?,
                 num_accidentes = ?,
@@ -98,6 +99,7 @@ try {
                 $_POST['num_capacitaciones_programadas'],
                 $archivo_cronograma,
                 $_POST['num_capacitaciones_ejecutadas'],
+                $_POST['num_empleados_capacitados'],
                 $archivo_soportes,
                 $_POST['tiene_accidentes'],
                 $num_accidentes,
@@ -115,16 +117,17 @@ try {
             // Insertar nuevo registro
             $stmt = $conn->prepare("INSERT INTO reporte_anual_adicional 
                 (generador_id, anio, num_capacitaciones_programadas, archivo_cronograma,
-                 num_capacitaciones_ejecutadas, archivo_soportes_capacitaciones,
+                 num_capacitaciones_ejecutadas, num_empleados_capacitados, archivo_soportes_capacitaciones,
                  tiene_accidentes, num_accidentes, acciones_preventivas, otra_accion_preventiva,
                  num_auditorias, archivo_resultados_auditorias, archivo_plan_mejoramiento)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,?, ?)");
             
             $stmt->execute([
                 $generador_id, $anio,
                 $_POST['num_capacitaciones_programadas'],
                 $archivo_cronograma,
                 $_POST['num_capacitaciones_ejecutadas'],
+                $_POST['num_empleados_capacitados'],
                 $archivo_soportes,
                 $_POST['tiene_accidentes'],
                 $num_accidentes,
