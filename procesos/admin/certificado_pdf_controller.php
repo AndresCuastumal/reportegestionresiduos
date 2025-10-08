@@ -125,7 +125,7 @@ class CertificadoPdfController {
                     line-height: 1.4;
                 }
                 .certificado {
-                    border: 3px solid #4CAF50;
+                    border: 3px solid #4caf4f;
                     padding: 40px;
                     text-align: center;
                 }
@@ -183,11 +183,11 @@ class CertificadoPdfController {
             <div class='certificado'>
                 <div class='header'>
                     <h1>Certificado de Aprobación</h1>
-                    <h2>Reporte Anual de Gestión de Residuos Peligrosos - Año $anio</h2>
+                    <h2>REPORTE ANUAL DE GESTIÓN DE RESIDUOS GENERADOS EN ATENCIÓN EN SALUD Y OTRAS ACTIVIDADES - Año $anio</h2>
                 </div>
                 
                 <div class='texto-centrado'>
-                    <p>El Sistema de Gestión de Residuos Peligrosos certifica que:</p>
+                    <p>La Secretaría Municipal de Salud de Pasto - oficina de salud ambiental  certifica que:</p>
                 </div>
                 
                 <div class='datos-generador'>
@@ -200,7 +200,7 @@ class CertificadoPdfController {
                 
                 <div class='content'>
                     <p>Ha cumplido satisfactoriamente con la presentación y aprobación del Reporte Anual 
-                    de Gestión de Residuos Peligrosos correspondiente al año <strong>$anio</strong>, 
+                    de Gestión de Residuos generados en atención en salud y otras actividades correspondiente al año <strong>$anio</strong>, 
                     de acuerdo con lo establecido en la normativa ambiental vigente.</p>
                     
                     <p>El presente certificado acredita que todos los formularios requeridos han sido 
@@ -212,7 +212,7 @@ class CertificadoPdfController {
                     <p>Fecha de Emisión: <strong>$fecha_actual</strong></p>
                     <br>
                     <p>_________________________</p>
-                    <p><strong>Sistema de Gestión de Residuos Peligrosos</strong></p>
+                    <p><strong>Sistema de Gestión de Residuos Generados en Atención en Salud y Otras Actividades</strong></p>
                     <p><em>Certificado generado automáticamente</em></p>
                 </div>
                 

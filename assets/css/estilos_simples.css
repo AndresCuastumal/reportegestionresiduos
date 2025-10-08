@@ -254,3 +254,82 @@
     color: #6c757d !important;
     border-color: #dee2e6;
 }
+
+/* En tu archivo CSS */
+.btn-action.disabled {
+    opacity: 0.5;
+    cursor: not-allowed !important;
+    pointer-events: none;
+}
+
+.btn-action.disabled:hover {
+    background-color: transparent !important;
+    transform: none !important;
+}
+
+
+.mes-cantidad:read-only {
+    background-color: #f8f9fa !important;
+    border-color: #dee2e6 !important;
+    color: #6c757d;
+}
+
+.bg-light[readonly] {
+    background-color: #f8f9fa !important;
+}
+
+/* Estilos para el grid de meses */
+.meses-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1rem;
+    margin-bottom: 1rem;
+}
+
+.mes-item {
+    display: flex;
+    flex-direction: column;
+}
+
+.mes-nombre {
+    font-weight: 500;
+    margin-bottom: 0.25rem;
+    color: #495057;
+}
+
+.form-control:read-only, .form-select:disabled {
+    background-color: #f8f9fa !important;
+    border-color: #dee2e6 !important;
+    color: #6c757d;
+}
+
+.bg-light[readonly] {
+    background-color: #f8f9fa !important;
+}
+
+.form-check-input:disabled {
+    background-color: #e9ecef;
+    border-color: #dee2e6;
+}
+
+.form-control:read-only, .form-select:disabled {
+    background-color: #f8f9fa !important;
+    border-color: #dee2e6 !important;
+    color: #6c757d;
+}
+
+.bg-light[readonly] {
+    background-color: #f8f9fa !important;
+}
+
+.form-check-input:disabled {
+    background-color: #e9ecef;
+    border-color: #dee2e6;
+}
+
+/* Estilos para campos deshabilitados visualmente */
+.form-control.bg-light, .form-select.bg-light {
+    background-color: #f8f9fa !important;
+    border-color: #dee2e6 !important;
+    color: #6c757d;
+}

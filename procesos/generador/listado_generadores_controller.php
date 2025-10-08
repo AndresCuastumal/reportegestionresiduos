@@ -137,7 +137,7 @@ class GeneradoresController {
     ];
     
     return $mapeo_estados[$estado] ?? 'badge-secondary';
-}
+ }
 
     public function getTextoEstado($estado) {
         $mapeo_textos = [
@@ -147,6 +147,26 @@ class GeneradoresController {
         ];
         
         return $mapeo_textos[$estado] ?? 'Sin revisión';
+    }
+
+    // Agrega esta función después del método getTextoEstado()
+    public function obtenerEstadoContingencias($generador_id) {
+        try {
+            $stmt = $this->conn->prepare("
+                SELECT estado 
+                FROM contingencias 
+                WHERE generador_id = ? 
+                ORDER BY id DESC 
+                LIMIT 1
+            ");
+            $stmt->execute([$generador_id]);
+            $resultado = $stmt->fetch(PDO::FETCH_ASSOC);
+            
+            return $resultado ? $resultado['estado'] : null;
+        } catch (PDOException $e) {
+            error_log("Error al obtener estado de contingencias: " . $e->getMessage());
+            return null;
+        }
     }
 }
 

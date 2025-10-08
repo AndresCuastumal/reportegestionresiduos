@@ -1,6 +1,8 @@
 <?php
 session_start();
 require_once '../../includes/header.php';
+require_once '../../includes/conexion.php';
+require_once '../../procesos/admin/revisiones_controller.php';
 
 // Verificar si viene de navegación interna entre formularios
 if (isset($_GET['id']) && !isset($_SESSION['generador_id_reportando'])) {
@@ -36,6 +38,16 @@ if (!isset($_SESSION['generador_id_reportando']) || $_SESSION['generador_id_repo
 $generador_id = $_GET['id'];
 $anio_actual = $_SESSION['anio_reportando'];
 
+// ✅ NUEVO: Crear controlador de revisiones
+$revisionController = new RevisionesController($conn);
+
+// ✅ NUEVO: Verificar estado del formulario de accidentes
+$estado_formulario_accidentes = $revisionController->obtenerEstadoFormulario($generador_id, $anio_actual, 'accidentes');
+$puede_editar = ($estado_formulario_accidentes === 'rechazado');
+
+// ✅ NUEVA LÓGICA: Puede editar si está rechazado O si no hay revisión (estado inicial)
+$modo_edicion = $puede_editar || ($estado_formulario_accidentes === 'pendiente' || $estado_formulario_accidentes === 'sin_datos');
+
 // Obtener datos del generador
 require_once '../../includes/conexion.php';
 $stmt = $conn->prepare("SELECT * FROM generador WHERE id = ?");
@@ -59,14 +71,16 @@ if ($stmt_adicional->rowCount() > 0) {
     }
 }
 
-// Verificar si las contingencias ya están confirmadas (bloqueadas)
+// ✅ ACTUALIZAR: Verificar si las contingencias ya están confirmadas (bloqueadas) - considerar también el estado de revisión
 $stmt_contingencias = $conn->prepare("SELECT estado FROM contingencias WHERE generador_id = ? AND anio = ?");
 $stmt_contingencias->execute([$generador_id, $anio_actual]);
 $contingencia = $stmt_contingencias->fetch(PDO::FETCH_ASSOC);
 
-$reporte_bloqueado = ($contingencia && $contingencia['estado'] == 'confirmado');
-$readonly = $reporte_bloqueado ? 'readonly' : '';
-$disabled = $reporte_bloqueado ? 'disabled' : '';
+$reporte_bloqueado = ($contingencia && $contingencia['estado'] == 'confirmado') && !$puede_editar;
+
+// ✅ ACTUALIZAR: Lógica de readonly/disabled
+$readonly = ($reporte_bloqueado || !$modo_edicion) ? 'readonly' : '';
+$disabled = ($reporte_bloqueado || !$modo_edicion) ? 'disabled' : '';
 
 // Verificar si los tres formularios están completos (pero en estado borrador)
 $formularios_completos = false;
@@ -94,13 +108,25 @@ if (!$reporte_bloqueado) {
 }
 ?>  <?php
 // mensaje si el reporte ya fue enviado
-    if(isset($contingencia) && is_array($contingencia) && isset($contingencia['estado']) && $contingencia['estado']=='confirmado'): ?>
+    if ($estado_formulario_accidentes === 'rechazado'): ?>
+        <div class="alert alert-warning alert-dismissible fade show mb-4">
+            <i class="bi bi-exclamation-triangle me-2"></i>
+            <strong>Formulario Requiere Correcciones</strong>
+            <p class="mb-0 mt-2">Este formulario ha sido <strong>rechazado</strong> por el revisor. 
+            Por favor realice las correcciones solicitadas y envíe nuevamente para revisión.</p>
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    <?php endif; ?>
+
+    <?php
+    // ✅ ACTUALIZAR: Mensaje si el reporte ya fue enviado
+    if($reporte_bloqueado): ?>
         <div class="alert alert-warning text-center mb-0">
             <i class="bi bi-exclamation-triangle me-2"></i>
             <strong>El reporte anual para el año <?= $anio_actual ?> ya fue enviado y está en proceso de revisión.</strong>
             No puede realizar modificaciones adicionales.
         </div>    
-    <?php endif;
+    <?php endif; ?>
     ?>
     <!-- Contenedor principal -->
     <div class="container my-4">
@@ -161,8 +187,16 @@ if (!$reporte_bloqueado) {
         </div>
         <?php endif; ?>
         <div class="card">
-            <div class="card-header bg-light">
-                <h5 class="mb-0"><i class="bi bi-info-circle me-2"></i>Formulario de Reporte Adicional</h5>
+            <div class="card-header bg-light d-flex justify-content-between align-items-center">
+                <h5 class="mb-0"><i class="bi bi-clipboard-check me-2"></i>Formulario de Reporte Adicional</h5>
+                <!-- ✅ NUEVO: Badge de estado -->
+                <span class="badge 
+                    <?= $estado_formulario_accidentes === 'aprobado' ? 'bg-success' : '' ?>
+                    <?= $estado_formulario_accidentes === 'rechazado' ? 'bg-danger' : '' ?>
+                    <?= $estado_formulario_accidentes === 'pendiente' ? 'bg-warning' : '' ?>
+                    <?= $estado_formulario_accidentes === 'sin_datos' ? 'bg-secondary' : '' ?>">
+                    <?= strtoupper($estado_formulario_accidentes) ?>
+                </span>
             </div>
             <div class="card-body">
                 <?php if (isset($_SESSION['error'])): ?>
@@ -170,6 +204,14 @@ if (!$reporte_bloqueado) {
                         <i class="bi bi-exclamation-triangle me-2"></i><?= $_SESSION['error'] ?>
                     </div>
                     <?php unset($_SESSION['error']); ?>
+                <?php endif; ?>
+                
+                <!-- ✅ NUEVO: Mensaje cuando no puede editar -->
+                <?php if (!$modo_edicion && $estado_formulario_accidentes === 'aprobado'): ?>
+                    <div class="alert alert-info">
+                        <i class="bi bi-check-circle me-2"></i>
+                        Este formulario ha sido <strong>aprobado</strong> y no requiere modificaciones.
+                    </div>
                 <?php endif; ?>
                 
                 <form method="POST" enctype="multipart/form-data" action="../../procesos/generador/procesar_reporte_adicional.php">
@@ -185,19 +227,21 @@ if (!$reporte_bloqueado) {
                                     Número de capacitaciones programadas sobre manejo de residuos
                                     <span class="text-danger">*</span>
                                 </label>
-                                <input type="number" class="form-control" 
+                                <input type="number" class="form-control <?= !$modo_edicion ? 'bg-light' : '' ?>" 
                                        name="num_capacitaciones_programadas" 
                                        min="0" required
-                                       value="<?= $info_adicional['num_capacitaciones_programadas'] ?? '' ?>"<?= $readonly ?>>
+                                       value="<?= $info_adicional['num_capacitaciones_programadas'] ?? '' ?>"<?= $readonly ?>
+                                       <?= !$modo_edicion ? 'style="background-color: #f8f9fa; border-color: #dee2e6;"' : '' ?>>
                             </div>
                             <div class="col-md-6 mb-3">
                                 <label class="form-label">
                                     Cronograma de capacitaciones (PDF)
                                     <?php if (!$info_adicional): ?><span class="text-danger">*</span><?php endif; ?>
                                 </label>
-                                <input type="file" class="form-control" 
+                                <input type="file" class="form-control <?= !$modo_edicion ? 'bg-light' : '' ?>" 
                                        name="archivo_cronograma" 
-                                       accept=".pdf" <?= !$info_adicional ? 'required' : '' ?> <?= $disabled ?>>
+                                       accept=".pdf" <?= !$info_adicional ? 'required' : '' ?> <?= $disabled ?>
+                                        <?= !$modo_edicion ? 'style="background-color: #f8f9fa; border-color: #dee2e6;"' : '' ?>>
                                 <?php if ($info_adicional && !empty($info_adicional['archivo_cronograma'])): ?>
                                 <div class="form-text">
                                     <a href="../../procesos/uploads/soportes_anuales/<?= $info_adicional['archivo_cronograma'] ?>" 
@@ -216,20 +260,22 @@ if (!$reporte_bloqueado) {
                                     Número de capacitaciones ejecutadas sobre manejo de residuos
                                     <span class="text-danger">*</span>
                                 </label>
-                                <input type="number" class="form-control" 
+                                <input type="number" class="form-control <?= !$modo_edicion ? 'bg-light' : '' ?>" 
                                        name="num_capacitaciones_ejecutadas" 
                                        min="0" required
-                                       value="<?= $info_adicional['num_capacitaciones_ejecutadas'] ?? '' ?>" <?= $readonly ?>>
+                                       value="<?= $info_adicional['num_capacitaciones_ejecutadas'] ?? '' ?>" <?= $readonly ?>
+                                        <?= !$modo_edicion ? 'style="background-color: #f8f9fa; border-color: #dee2e6;"' : '' ?>>
                             </div>
                             <div class="col-md-6 mb-3">
                                 <label class="form-label">
                                     Número de empleados capacitados en manejo de residuos
                                     <span class="text-danger">*</span>
                                 </label>
-                                <input type="number" class="form-control" 
+                                <input type="number" class="form-control <?= !$modo_edicion ? 'bg-light' : '' ?>" 
                                        name="num_empleados_capacitados" 
                                        min="0" required
-                                       value="<?= $info_adicional['num_empleados_capacitados'] ?? '' ?>" <?= $readonly ?>>
+                                       value="<?= $info_adicional['num_empleados_capacitados'] ?? '' ?>" <?= $readonly ?>
+                                        <?= !$modo_edicion ? 'style="background-color: #f8f9fa; border-color: #dee2e6;"' : '' ?>>
                             </div>
                             <div class="col-md-6 mb-3">
                                 <label class="form-label">
@@ -238,7 +284,8 @@ if (!$reporte_bloqueado) {
                                 </label>
                                 <input type="file" class="form-control" 
                                        name="archivo_soportes_capacitaciones" 
-                                       accept=".pdf" <?= !$info_adicional ? 'required' : '' ?> <?= $disabled ?>>
+                                       accept=".pdf" <?= !$info_adicional ? 'required' : '' ?> <?= $disabled ?>
+                                        <?= !$modo_edicion ? 'style="background-color: #f8f9fa; border-color: #dee2e6;"' : '' ?>>
                                 <div class="form-text">Relacionados únicamente con manejo de residuos</div>
                                 <?php if ($info_adicional && !empty($info_adicional['archivo_soportes_capacitaciones'])): ?>
                                 <div class="form-text">
@@ -263,7 +310,10 @@ if (!$reporte_bloqueado) {
                                     ¿Se han presentado accidentes ocurridos por manejo de residuos?
                                     <span class="text-danger">*</span>
                                 </label>
-                                <select class="form-select" name="tiene_accidentes" id="tiene_accidentes" required <?= $disabled ?>>
+                                <select class="form-select <?= !$modo_edicion ? 'bg-light' : '' ?>" 
+                                name="tiene_accidentes" id="tiene_accidentes" required 
+                                <?= $disabled ?>
+                                <?= !$modo_edicion ? 'style="background-color: #f8f9fa; border-color: #dee2e6;"' : '' ?>>
                                     <option value="no" <?= (isset($info_adicional['tiene_accidentes']) && $info_adicional['tiene_accidentes'] == 'no') ? 'selected' : '' ?>>No</option>
                                     <option value="si" <?= (isset($info_adicional['tiene_accidentes']) && $info_adicional['tiene_accidentes'] == 'si') ? 'selected' : '' ?>>Sí</option>
                                 </select>
@@ -274,9 +324,10 @@ if (!$reporte_bloqueado) {
                                         Número de accidentes ocurridos por manejo de residuos
                                         <span class="text-danger">*</span>
                                     </label>
-                                    <input type="number" class="form-control" 
+                                    <input type="number" class="form-control <?= !$modo_edicion ? 'bg-light' : '' ?>" 
                                            name="num_accidentes" 
-                                           min="0" value="<?= $info_adicional['num_accidentes'] ?? '0' ?>" <?= $readonly ?>>
+                                           min="0" value="<?= $info_adicional['num_accidentes'] ?? '0' ?>" <?= $readonly ?>
+                                            <?= !$modo_edicion ? 'style="background-color: #f8f9fa; border-color: #dee2e6;"' : '' ?> >
                                 </div>
                             </div>
                         </div>
@@ -291,7 +342,8 @@ if (!$reporte_bloqueado) {
                                     <input class="form-check-input" type="checkbox" 
                                            name="acciones_preventivas[]" 
                                            value="remision_salud" id="accion1"
-                                           <?= (in_array('remision_salud', $acciones_preventivas)) ? 'checked' : '' ?> <?= $disabled ?>>
+                                           <?= (in_array('remision_salud', $acciones_preventivas)) ? 'checked' : '' ?> <?= $disabled ?>
+                                           <?= !$modo_edicion ? 'onclick="return false;"' : '' ?>>
                                     <label class="form-check-label" for="accion1">
                                         Remisión a servicios de salud
                                     </label>
@@ -300,7 +352,8 @@ if (!$reporte_bloqueado) {
                                     <input class="form-check-input" type="checkbox" 
                                            name="acciones_preventivas[]" 
                                            value="capacitacion_primeros_auxilios" id="accion2"
-                                           <?= (in_array('capacitacion_primeros_auxilios', $acciones_preventivas)) ? 'checked' : '' ?> <?= $disabled ?>>
+                                           <?= (in_array('capacitacion_primeros_auxilios', $acciones_preventivas)) ? 'checked' : '' ?> <?= $disabled ?>
+                                            <?= !$modo_edicion ? 'onclick="return false;"' : '' ?>>
                                     <label class="form-check-label" for="accion2">
                                         Capacitación en primeros auxilios
                                     </label>
@@ -309,7 +362,8 @@ if (!$reporte_bloqueado) {
                                     <input class="form-check-input" type="checkbox" 
                                            name="acciones_preventivas[]" 
                                            value="investigacion_accidente" id="accion3"
-                                           <?= (in_array('investigacion_accidente', $acciones_preventivas)) ? 'checked' : '' ?> <?= $disabled ?>>
+                                           <?= (in_array('investigacion_accidente', $acciones_preventivas)) ? 'checked' : '' ?> <?= $disabled ?>
+                                            <?= !$modo_edicion ? 'onclick="return false;"' : '' ?>>
                                     <label class="form-check-label" for="accion3">
                                         Investigación del accidente
                                     </label>
@@ -318,7 +372,8 @@ if (!$reporte_bloqueado) {
                                     <input class="form-check-input" type="checkbox" 
                                            name="acciones_preventivas[]" 
                                            value="actualizacion_procedimientos" id="accion4"
-                                           <?= (in_array('actualizacion_procedimientos', $acciones_preventivas)) ? 'checked' : '' ?> <?= $disabled ?>>
+                                           <?= (in_array('actualizacion_procedimientos', $acciones_preventivas)) ? 'checked' : '' ?> <?= $disabled ?>
+                                            <?= !$modo_edicion ? 'onclick="return false;"' : '' ?>>
                                     <label class="form-check-label" for="accion4">
                                         Actualización de procedimientos
                                     </label>
@@ -327,17 +382,19 @@ if (!$reporte_bloqueado) {
                                     <input class="form-check-input" type="checkbox" 
                                            name="acciones_preventivas[]" 
                                            value="otra" id="accion_otra"
-                                           <?= (in_array('otra', $acciones_preventivas) || !empty($info_adicional['otra_accion_preventiva'])) ? 'checked' : '' ?> <?= $disabled ?>>
+                                           <?= (in_array('otra', $acciones_preventivas) || !empty($info_adicional['otra_accion_preventiva'])) ? 'checked' : '' ?> <?= $disabled ?>
+                                            <?= !$modo_edicion ? 'onclick="return false;"' : '' ?>>
                                     <label class="form-check-label" for="accion_otra">
                                         Otra
                                     </label>
                                 </div>
                                 <div class="mt-2" id="otra_accion_container" style="display: <?= (!empty($info_adicional['otra_accion_preventiva']) || (isset($acciones_preventivas) && in_array('otra', $acciones_preventivas))) ? 'block' : 'none' ?>;">
-                                <input type="text" class="form-control" 
+                                <input type="number" class="form-control <?= !$modo_edicion ? 'bg-light' : '' ?>" 
                                     name="otra_accion_preventiva" 
                                     placeholder="Especifique cuál"
-                                    value="<?= $info_adicional['otra_accion_preventiva'] ?? '' ?>" <?= $readonly ?>>
-                            </div>
+                                    value="<?= $info_adicional['otra_accion_preventiva'] ?? '' ?>" <?= $readonly ?>
+                                    <?= !$modo_edicion ? 'style="background-color: #f8f9fa; border-color: #dee2e6;"' : '' ?>>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -357,10 +414,11 @@ if (!$reporte_bloqueado) {
                                     Número de auditorías internas y/o externas realizadas sobre el manejo de residuos sólidos
                                     <span class="text-danger">*</span>
                                 </label>
-                                <input type="number" class="form-control" 
+                                <input type="number" class="form-control <?= !$modo_edicion ? 'bg-light' : '' ?>"
                                        name="num_auditorias" 
                                        min="0" required
-                                       value="<?= $info_adicional['num_auditorias'] ?? '' ?>" <?= $readonly ?>>
+                                       value="<?= $info_adicional['num_auditorias'] ?? '' ?>" <?= $readonly ?>
+                                        <?= !$modo_edicion ? 'style="background-color: #f8f9fa; border-color: #dee2e6;"' : '' ?>>
                             </div>
                         </div>
                         
@@ -372,7 +430,8 @@ if (!$reporte_bloqueado) {
                                 </label>
                                 <input type="file" class="form-control" 
                                        name="archivo_resultados_auditorias" 
-                                       accept=".pdf" <?= !$info_adicional ? 'required' : '' ?> <?= $disabled ?>>
+                                       accept=".pdf" <?= !$info_adicional ? 'required' : '' ?> <?= $disabled ?>
+                                       <?= !$modo_edicion ? 'style="background-color: #f8f9fa; border-color: #dee2e6;"' : '' ?>>
                                 <div class="form-text">Acta(s) de auditorías realizadas</div>
                                 <?php if ($info_adicional && !empty($info_adicional['archivo_resultados_auditorias'])): ?>
                                 <div class="form-text">
@@ -391,7 +450,8 @@ if (!$reporte_bloqueado) {
                                 </label>
                                 <input type="file" class="form-control" 
                                        name="archivo_plan_mejoramiento" 
-                                       accept=".pdf" <?= !$info_adicional ? 'required' : '' ?> <?= $disabled ?>>
+                                       accept=".pdf" <?= !$info_adicional ? 'required' : '' ?> <?= $disabled ?>
+                                       <?= !$modo_edicion ? 'style="background-color: #f8f9fa; border-color: #dee2e6;"' : '' ?>>
                                 <div class="form-text">Plan de mejoramiento para el año evaluado</div>
                                 <?php if ($info_adicional && !empty($info_adicional['archivo_plan_mejoramiento'])): ?>
                                 <div class="form-text">
@@ -423,9 +483,13 @@ if (!$reporte_bloqueado) {
                         class="btn btn-outline btn-outline-secondary">
                             <i class="bi bi-arrow-left me-2"></i>Volver
                         </a>
-                        <?php if (!$reporte_bloqueado): ?>                            
+                        
+                        <!-- ✅ ACTUALIZAR: Mostrar botón solo si puede editar -->
+                        <?php if ($modo_edicion && !$reporte_bloqueado): ?>                            
                         <button type="submit" class="btn btn-outline btn-outline-success">
-                            <i class="bi bi-check-circle me-2"></i><?= $info_adicional ? 'Actualizar' : 'Guardar' ?> Reporte
+                            <i class="bi bi-check-circle me-2"></i>
+                            <?= $info_adicional ? 'Actualizar' : 'Guardar' ?> Reporte
+                            <?= $estado_formulario_accidentes === 'rechazado' ? 'y Reenviar' : '' ?>
                         </button>
                         <?php endif; ?>
                     </div>
@@ -435,16 +499,18 @@ if (!$reporte_bloqueado) {
     </div>
 
     <script>
+        <?php if ($modo_edicion && !$reporte_bloqueado): ?>
+        // Solo habilitar la funcionalidad JavaScript si está en modo edición
         document.getElementById('tiene_accidentes').addEventListener('change', function() {
             document.getElementById('numero_accidentes_container').style.display = 
                 this.value === 'si' ? 'block' : 'none';
         });
-        
+
         document.getElementById('accion_otra').addEventListener('change', function() {
             document.getElementById('otra_accion_container').style.display = 
                 this.checked ? 'block' : 'none';
         });
-        
+
         // Inicializar el estado de los campos al cargar la página
         window.addEventListener('DOMContentLoaded', function() {
             // Mostrar/ocultar campo de número de accidentes según selección actual
@@ -457,6 +523,20 @@ if (!$reporte_bloqueado) {
             document.getElementById('otra_accion_container').style.display = 
                 accionOtra.checked ? 'block' : 'none';
         });
+        <?php else: ?>
+        // Si no está en modo edición, deshabilitar la interactividad
+        window.addEventListener('DOMContentLoaded', function() {
+            // Mostrar/ocultar campo de número de accidentes según selección actual (solo visual)
+            const tieneAccidentes = document.getElementById('tiene_accidentes');
+            document.getElementById('numero_accidentes_container').style.display = 
+                tieneAccidentes.value === 'si' ? 'block' : 'none';
+                
+            // Mostrar/ocultar campo de otra acción según estado del checkbox (solo visual)
+            const accionOtra = document.getElementById('accion_otra');
+            document.getElementById('otra_accion_container').style.display = 
+                accionOtra.checked ? 'block' : 'none';
+        });
+        <?php endif; ?>
     </script>
 
     <!-- Footer -->

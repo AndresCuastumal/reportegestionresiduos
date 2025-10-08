@@ -62,6 +62,11 @@ class RevisionesController {
         ]);
         
         if ($success) {
+            // ✅ NUEVO: Actualizar estado de contingencias si hay rechazo
+            if ($data['formulario_mensual'] === 'rechazado') {
+                $this->actualizarEstadoContingencias($data['generador_id'], 'rechazado');
+            }
+            
             // Actualizar el estado general automáticamente
             $this->actualizarEstadoGeneralAutomatico($data['generador_id'], $data['anio']);
             
@@ -72,8 +77,7 @@ class RevisionesController {
         return $success;
     }
 
-    // Verificar y enviar notificaciones si corresponde
-    // Verificar y enviar notificaciones si corresponde - CON MÁS DEBUG
+    // Verificar y enviar notificaciones si corresponde    
     private function verificarYEnviarNotificaciones($generador_id, $anio) {
         error_log("🎯 === VERIFICANDO NOTIFICACIONES ===");
         error_log("🎯 Llamado desde: " . debug_backtrace()[1]['function']);
@@ -167,12 +171,19 @@ class RevisionesController {
         
         if ($success) {
             error_log("✅ Actualización de accidentes exitosa");
+            
+            // ✅ NUEVO: Actualizar estado de contingencias si hay rechazo
+            if ($data['formulario_accidentes'] === 'rechazado') {
+                $this->actualizarEstadoContingencias($data['generador_id'], 'rechazado');
+            }
+            
             // Actualizar el estado general automáticamente
             $this->actualizarEstadoGeneralAutomatico($data['generador_id'], $data['anio']);
             
-            // ✅ NUEVO: Verificar si es el último formulario y enviar notificaciones
+            // Verificar si es el último formulario y enviar notificaciones
             $this->verificarYEnviarNotificaciones($data['generador_id'], $data['anio']);
-        } else {
+        } 
+        else {
             error_log("❌ Error en la actualización de accidentes");
         }
         
@@ -213,10 +224,16 @@ class RevisionesController {
         
         if ($success) {
             error_log("✅ Actualización de contingencias exitosa");
+            
+            // ✅ NUEVO: Actualizar estado de contingencias si hay rechazo
+            if ($data['formulario_contingencias'] === 'rechazado') {
+                $this->actualizarEstadoContingencias($data['generador_id'], 'rechazado');
+            }
+            
             // Actualizar el estado general automáticamente
             $this->actualizarEstadoGeneralAutomatico($data['generador_id'], $data['anio']);
             
-            // ✅ NUEVO: Verificar si es el último formulario y enviar notificaciones
+            // Verificar si es el último formulario y enviar notificaciones
             $this->verificarYEnviarNotificaciones($data['generador_id'], $data['anio']);
         } else {
             error_log("❌ Error en la actualización de contingencias");
@@ -235,11 +252,11 @@ class RevisionesController {
         $stmt->execute([$generador_id, $anio]);
         $revision = $stmt->fetch(PDO::FETCH_ASSOC);
         
+        // ✅ Asegúrate que solo devuelva true si los 3 están APROBADOS
         return ($revision['formulario_mensual'] === 'aprobado' &&
                 $revision['formulario_accidentes'] === 'aprobado' &&
                 $revision['formulario_contingencias'] === 'aprobado');
     }
-    // ... después de los métodos existentes ...
 
     // Actualizar el estado general de la revisión
     public function actualizarEstadoGeneral($generador_id, $anio, $estado_general) {
@@ -540,13 +557,10 @@ class RevisionesController {
         $estados = $this->obtenerEstadoFormularios($generador_id, $anio);
         $observaciones = $this->obtenerObservaciones($generador_id, $anio);
 
-        // Variable para guardar el nombre del PDF
-        $nombre_pdf_generado = null;
-        
         error_log("Estados para notificación: " . print_r($estados, true));
-        error_log("Observaciones: " . ($observaciones ? 'SÍ' : 'NO'));
         
-         // Si todos están aprobados, enviar certificado
+        
+        // ✅ SOLO SI TODOS ESTÁN APROBADOS - enviar certificado y finalizar
         if ($this->verificarFormulariosCompletos($generador_id, $anio)) {
             error_log("✅ TODOS APROBADOS - Generando certificado...");
             
@@ -555,49 +569,36 @@ class RevisionesController {
                 $nombre_pdf = $pdfController->generarCertificadoAprobacion($generador_id, $anio);
                 $ruta_pdf = "../../procesos/uploads/certificados/" . $nombre_pdf;
                 
-                // Guardar el nombre del PDF para la base de datos
-                $nombre_pdf_generado = $nombre_pdf;
-                
                 error_log("PDF generado: " . $nombre_pdf);
-                error_log("Ruta PDF: " . $ruta_pdf);
-                
-                // Verificar si el PDF se creó
-                if (!file_exists($ruta_pdf)) {
-                    error_log("❌ ERROR: El PDF no se creó correctamente");
-                } else {
-                    error_log("✅ PDF verificado correctamente");
-                }
                 
                 // Enviar email con certificado
                 $email_enviado = $emailController->enviarCertificadoAprobacion($generador_id, $anio, $ruta_pdf);
                 error_log("Email enviado: " . ($email_enviado ? '✅ SÍ' : '❌ NO'));
                 
-                // Marcar como finalizado CON EL NOMBRE DEL PDF
-                $finalizado = $this->marcarComoFinalizado($generador_id, $anio, $nombre_pdf_generado);
+                // ✅ SOLO AQUÍ marcar como finalizado (con PDF)
+                $finalizado = $this->marcarComoFinalizado($generador_id, $anio, $nombre_pdf);
                 error_log("Marcado como finalizado: " . ($finalizado ? '✅ SÍ' : '❌ NO'));
-                
                 
             } catch (Exception $e) {
                 error_log("❌ ERROR en generación de certificado: " . $e->getMessage());
-                // Marcar como finalizado incluso si hay error (pero sin PDF)
-                $this->marcarComoFinalizado($generador_id, $anio);
             }
             
         } 
-        // Si hay algún rechazo, enviar notificación de correcciones
+        // ✅ SI HAY RECHAZOS - solo enviar notificación, NO finalizar
         elseif ($estados['formulario_mensual'] === 'rechazado' || 
                 $estados['formulario_accidentes'] === 'rechazado' || 
                 $estados['formulario_contingencias'] === 'rechazado') {
             
-            error_log("⚠️ HAY RECHAZOS - Enviando notificación...");
+            error_log("⚠️ HAY RECHAZOS - Enviando notificación de correcciones...");
             
             try {
                 $email_enviado = $emailController->enviarNotificacionRechazo($generador_id, $anio, $observaciones);
                 error_log("Email de rechazo enviado: " . ($email_enviado ? '✅ SÍ' : '❌ NO'));
                 
-                // También marcar como finalizado en caso de rechazo (sin PDF)
-                $finalizado = $this->marcarComoFinalizado($generador_id, $anio);
-                error_log("Marcado como finalizado por rechazo: " . ($finalizado ? '✅ SÍ' : '❌ NO'));
+                // ❌ ELIMINAR ESTA LÍNEA - NO marcar como finalizado
+                // $finalizado = $this->marcarComoFinalizado($generador_id, $anio);
+                
+                error_log("✅ Revisión NO finalizada - esperando correcciones del usuario");
                 
             } catch (Exception $e) {
                 error_log("❌ ERROR en envío de notificación de rechazo: " . $e->getMessage());
@@ -706,6 +707,44 @@ class RevisionesController {
         error_log("DEBUG - Estado finalizado para $generador_id, $anio: " . print_r($resultado, true));
         
         return $resultado;
+    }
+    // Agrega esta función después de obtenerObservaciones()
+    private function actualizarEstadoContingencias($generador_id, $estado) {
+        try {
+            $stmt = $this->conn->prepare("
+                UPDATE contingencias 
+                SET estado = ?
+                WHERE generador_id = ? 
+                AND estado != 'confirmado'  -- No sobreescribir si ya está confirmado
+            ");
+            $success = $stmt->execute([$estado, $generador_id]);
+            
+            if ($success) {
+                error_log("✅ Estado de contingencias actualizado a: $estado para generador: $generador_id");
+            }
+            
+            return $success;
+        } catch (PDOException $e) {
+            error_log("❌ Error al actualizar estado de contingencias: " . $e->getMessage());
+            return false;
+        }
+    }
+    // Agrega esta función al final de la clase
+    public function usuarioPuedeEditarFormulario($generador_id, $anio, $tipo_formulario) {
+        $estado = $this->obtenerEstadoFormulario($generador_id, $anio, $tipo_formulario);
+        
+        // ✅ El usuario solo puede editar si el formulario está RECHAZADO
+        return ($estado === 'rechazado');
+    }
+
+    public function obtenerEstadoParaEdicion($generador_id, $anio) {
+        $estados = $this->obtenerEstadoFormularios($generador_id, $anio);
+        
+        return [
+            'mensual' => $estados['formulario_mensual'] === 'rechazado',
+            'accidentes' => $estados['formulario_accidentes'] === 'rechazado', 
+            'contingencias' => $estados['formulario_contingencias'] === 'rechazado'
+        ];
     }
 }
 ?>

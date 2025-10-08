@@ -2,6 +2,7 @@
 session_start();
 require_once '../../includes/conexion.php';
 require_once '../../procesos/generador/reporte_mensual_controller.php';
+require_once '../../procesos/admin/revisiones_controller.php';
 
 // Verificar si viene de navegación interna entre formularios
 if (isset($_GET['id']) && !isset($_SESSION['generador_id_reportando'])) {
@@ -15,6 +16,7 @@ if (isset($_GET['id'])) {
     
     // Crear controlador y obtener datos
     $controller = new ReporteMensualController($conn);
+    $revisionController = new RevisionesController($conn);
     
     // Verificar permisos
     if ($_SESSION['usuario_rol'] !== 'admin') {
@@ -33,6 +35,13 @@ if (isset($_GET['id'])) {
     $generador = $controller->obtenerDatosGenerador($generador_id);
     $anio_actual = date('Y', strtotime('-1 year'));
     $reportes_existentes = $controller->obtenerReportesExistentes($generador_id, $anio_actual);
+
+    // ✅ NUEVO: Verificar estado del formulario mensual
+    $estado_formulario_mensual = $revisionController->obtenerEstadoFormulario($generador_id, $anio_actual, 'mensual');
+    $puede_editar = ($estado_formulario_mensual === 'rechazado');
+
+    // ✅ NUEVA LÓGICA: Puede editar si está rechazado O si no hay revisión (estado inicial)
+    $modo_edicion = $puede_editar || ($estado_formulario_mensual === 'pendiente' || $estado_formulario_mensual === 'sin_datos');
     
     // Obtener información de revisión anual existente
     $stmt = $conn->prepare("SELECT * FROM revisiones_anuales 
@@ -45,8 +54,8 @@ if (isset($_GET['id'])) {
     $stmt_contingencias->execute([$generador_id, $anio_actual]);
     $contingencia = $stmt_contingencias->fetch(PDO::FETCH_ASSOC);
     
-    // CORRECCIÓN: Verificar si $contingencia es un array antes de acceder
-    $reporte_bloqueado = ($contingencia && isset($contingencia['estado']) && $contingencia['estado'] == 'confirmado');
+    // ✅ ACTUALIZAR: Considerar bloqueado solo si contingencias confirmadas Y no puede editar por rechazo
+    $reporte_bloqueado = ($contingencia && isset($contingencia['estado']) && $contingencia['estado'] == 'confirmado') && !$puede_editar;
     $readonly = $reporte_bloqueado ? 'readonly' : '';
     $disabled = $reporte_bloqueado ? 'disabled' : '';
     
@@ -83,16 +92,25 @@ if (isset($_GET['id'])) {
 include '../../includes/header.php';
 ?>
 <?php
-// mensaje si el reporte ya fue enviado
-// CORRECCIÓN: Verificar si $contingencia existe y tiene el estado 'confirmado'
-if(isset($contingencia) && is_array($contingencia) && isset($contingencia['estado']) && $contingencia['estado']=='confirmado'): ?>
+// ✅ NUEVO: Mensaje específico para formularios rechazados
+if ($estado_formulario_mensual === 'rechazado'): ?>
+    <div class="alert alert-warning alert-dismissible fade show mb-4">
+        <i class="bi bi-exclamation-triangle me-2"></i>
+        <strong>Formulario Requiere Correcciones</strong>
+        <p class="mb-0 mt-2">Este formulario ha sido <strong>rechazado</strong> por el revisor. 
+        Por favor realice las correcciones solicitadas y envíe nuevamente para revisión.</p>
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+<?php endif; ?>
+<?php
+// Mensaje si el reporte ya fue enviado (mantener existente)
+if(isset($contingencia) && is_array($contingencia) && isset($contingencia['estado']) && $contingencia['estado']=='confirmado' && !$puede_editar): ?>
     <div class="alert alert-warning text-center mb-0">
         <i class="bi bi-exclamation-triangle me-2"></i>
         <strong>El reporte anual para el año <?= $anio_actual ?> ya fue enviado y está en proceso de revisión.</strong>
         No puede realizar modificaciones adicionales.
     </div>    
-<?php endif;
-?>
+<?php endif; ?>
 
     <!-- Contenedor principal -->
     <div class="container my-4">
@@ -190,8 +208,16 @@ if(isset($contingencia) && is_array($contingencia) && isset($contingencia['estad
         <?php endif; ?>
         
         <div class="card">
-            <div class="card-header bg-light">
-                <h5 class="mb-0"><i class="bi bi-info-circle me-2"></i>Reporte Anual <?= $anio_actual ?></h5>
+            <div class="card-header bg-light d-flex justify-content-between align-items-center">
+                <h5 class="mb-0"><i class="bi bi-clipboard-data me-2"></i>Reporte Mensual <?= $anio_actual ?></h5>
+                <!-- ✅ NUEVO: Badge de estado -->
+                <span class="badge 
+                    <?= $estado_formulario_mensual === 'aprobado' ? 'bg-success' : '' ?>
+                    <?= $estado_formulario_mensual === 'rechazado' ? 'bg-danger' : '' ?>
+                    <?= $estado_formulario_mensual === 'pendiente' ? 'bg-warning' : '' ?>
+                    <?= $estado_formulario_mensual === 'sin_datos' ? 'bg-secondary' : '' ?>">
+                    <?= strtoupper($estado_formulario_mensual) ?>
+                </span>
             </div>
             <div class="card-body">
                 <?php if (isset($_SESSION['error'])): ?>
@@ -199,6 +225,14 @@ if(isset($contingencia) && is_array($contingencia) && isset($contingencia['estad
                         <i class="bi bi-exclamation-triangle me-2"></i><?= $_SESSION['error'] ?>
                     </div>
                     <?php unset($_SESSION['error']); ?>
+                <?php endif; ?>
+                
+                <!-- ✅ NUEVO: Mensaje cuando no puede editar -->
+                <?php if (!$modo_edicion && $estado_formulario_mensual === 'aprobado'): ?>
+                    <div class="alert alert-info">
+                        <i class="bi bi-check-circle me-2"></i>
+                        Este formulario ha sido <strong>aprobado</strong> y no requiere modificaciones.
+                    </div>
                 <?php endif; ?>
                 
                 <form method="POST" enctype="multipart/form-data" action="../../procesos/generador/procesar_reporte_mensual.php?id=<?= $generador_id ?>">
@@ -210,7 +244,7 @@ if(isset($contingencia) && is_array($contingencia) && isset($contingencia['estad
                         <div class="form-text">Sistema de reporte anual según Resolución 591 de 2024</div>
                     </div>
                     
-                    <!-- Datos del reporte mensual en 2 columnas -->
+                    <!-- Datos del reporte mensual -->
                     <h6 class="text-muted mb-3">Cantidad de residuos peligrosos por mes (kg)</h6>
                     <div class="meses-grid">
                         <?php
@@ -232,10 +266,13 @@ if(isset($contingencia) && is_array($contingencia) && isset($contingencia['estad
                         <div class="mes-item">
                             <span class="mes-nombre"><?= $nombre_mes ?></span>
                             <input type="number" step="0.01" min="0" 
-                                   name="meses[<?= $id_mes ?>]" 
-                                   value="<?= $valor_actual ?>"
-                                   class="form-control form-control-sm mes-cantidad" 
-                                   placeholder="0.00" <?= $readonly ?>>
+                                name="meses[<?= $id_mes ?>]" 
+                                value="<?= $valor_actual ?>"
+                                class="form-control form-control-sm mes-cantidad 
+                                        <?= !$modo_edicion ? 'bg-light' : '' ?>" 
+                                placeholder="0.00" 
+                                <?= $readonly ?>
+                                <?= !$modo_edicion ? 'style="background-color: #f8f9fa; border-color: #dee2e6;"' : '' ?>>
                         </div>
                         <?php endforeach; ?>
                     </div>
@@ -246,10 +283,15 @@ if(isset($contingencia) && is_array($contingencia) && isset($contingencia['estad
                         <div class="mb-3">
                             <label for="soporte_pdf" class="form-label">
                                 Cargar PDF con soportes de los 12 meses
-                                <?php if (!$revision_existente): ?><span class="text-danger">*</span><?php endif; ?>
+                                <?php if (!$revision_existente && $modo_edicion): ?><span class="text-danger">*</span><?php endif; ?>
                             </label>
-                            <input type="file" class="form-control" id="soporte_pdf" name="soporte_pdf" 
-                                accept=".pdf" <?= !$revision_existente ? 'required' : '' ?> <?= $disabled ?>>
+                            <input type="file" class="form-control 
+                                <?= !$modo_edicion ? 'bg-light' : '' ?>" 
+                                id="soporte_pdf" name="soporte_pdf" 
+                                accept=".pdf" 
+                                <?= !$revision_existente && $modo_edicion ? 'required' : '' ?> 
+                                <?= $disabled ?>
+                                <?= !$modo_edicion ? 'style="background-color: #f8f9fa; border-color: #dee2e6;"' : '' ?>>
                             <div class="form-text">
                                 Suba un solo archivo PDF que incluya todos los certificados, actas o soportes 
                                 de la empresa recolectora para los 12 meses del año. Tamaño máximo: 10MB.
@@ -258,7 +300,7 @@ if(isset($contingencia) && is_array($contingencia) && isset($contingencia['estad
                             <?php if ($revision_existente && !empty($revision_existente['soporte_pdf'])): ?>
                             <div class="form-text mt-2">
                                 <a href="../../procesos/uploads/soportes_anuales/<?= $revision_existente['soporte_pdf'] ?>" 
-                                   target="_blank" class="btn btn-sm btn-outline-primary">
+                                target="_blank" class="btn btn-sm btn-outline-primary">
                                     <i class="bi bi-download me-1"></i>Ver PDF actual
                                 </a>
                                 <span class="ms-2 text-muted">Si no selecciona un nuevo archivo, se mantendrá el actual.</span>
@@ -272,17 +314,19 @@ if(isset($contingencia) && is_array($contingencia) && isset($contingencia['estad
                             <i class="bi bi-arrow-left me-2"></i>Volver
                         </a>
                         <?php  
-                        // Mostrar botón SI NO está confirmado (puede ser borrador, null, o cualquier otro estado)
-                        if(!$reporte_bloqueado): 
+                        // ✅ ACTUALIZAR: Mostrar botón solo si puede editar
+                        if($modo_edicion && !$reporte_bloqueado): 
                             ?>
                             <button type="submit" class="btn btn-outline btn-outline-success">
-                                <i class="bi bi-cloud-upload me-2"></i><?= $revision_existente ? 'Actualizar' : 'Guardar' ?> Reporte
+                                <i class="bi bi-cloud-upload me-2"></i>
+                                <?= $revision_existente ? 'Actualizar' : 'Guardar' ?> Reporte
+                                <?= $estado_formulario_mensual === 'rechazado' ? 'y Reenviar' : '' ?>
                             </button>
                         <?php endif; ?>
                     </div> 
                 </form>
             </div>
-        </div>       
+        </div>      
     </div>
 
     <!-- Footer -->

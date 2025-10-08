@@ -2,6 +2,19 @@
 require_once '../../procesos/generador/listado_generadores_controller.php';
 include '../../includes/header.php'; // Incluye el encabezado HTML
 ?>
+<STyle>
+/* En tu archivo CSS */
+.btn-action.disabled {
+    opacity: 0.5;
+    cursor: not-allowed !important;
+    pointer-events: none;
+}
+
+.btn-action.disabled:hover {
+    background-color: transparent !important;
+    transform: none !important;
+}
+</STyle>
 <!-- Contenedor principal -->
     <div class="container my-4">
         <?php if (isset($_SESSION['mensaje_exito'])): ?>
@@ -123,15 +136,28 @@ include '../../includes/header.php'; // Incluye el encabezado HTML
                                     <td>
                                         <div class="d-flex gap-2">
                                             <a href="reporte_mensual_view.php?id=<?php echo $generador['id']; ?>" 
-                                               class="btn-action btn-reportar" title="Reportar residuos">
+                                            class="btn-action btn-reportar" title="Reportar residuos">
                                                 <i class="bi bi-clipboard-data"></i>
                                             </a>
+                                            
+                                            <?php
+                                            // ✅ USAR LA NUEVA FUNCIÓN del controlador
+                                            $estado_contingencias = $controller->obtenerEstadoContingencias($generador['id']);
+                                            $contingencias_confirmadas = ($estado_contingencias === 'confirmado');
+                                            ?>
+                                            
+                                            <!-- Botón Editar - Condicional -->
                                             <a href="generador_view.php?id=<?php echo $generador['id']; ?>" 
-                                               class="btn-action btn-editar" title="Editar">
+                                            class="btn-action btn-editar <?= $contingencias_confirmadas ? 'disabled' : '' ?>" 
+                                            title="<?= $contingencias_confirmadas ? 'No editable - Contingencias confirmadas' : 'Editar' ?>"
+                                            <?= $contingencias_confirmadas ? 'onclick="event.preventDefault(); mostrarAdvertenciaConfirmado();"' : '' ?>>
                                                 <i class="bi bi-pencil-square"></i>
                                             </a>
-                                            <button onclick="confirmarEliminacion(<?php echo $generador['id']; ?>)" 
-                                                    class="btn-action btn-eliminar" title="Eliminar">
+                                            
+                                            <!-- Botón Eliminar - Condicional -->
+                                            <button onclick="<?= $contingencias_confirmadas ? 'mostrarAdvertenciaConfirmado()' : 'confirmarEliminacion(' . $generador['id'] . ')' ?>" 
+                                                    class="btn-action btn-eliminar <?= $contingencias_confirmadas ? 'disabled' : '' ?>" 
+                                                    title="<?= $contingencias_confirmadas ? 'No eliminable - Contingencias confirmadas' : 'Eliminar' ?>">
                                                 <i class="bi bi-trash"></i>
                                             </button>
                                         </div>
@@ -187,4 +213,4 @@ include '../../includes/header.php'; // Incluye el encabezado HTML
         var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
             return new bootstrap.Tooltip(tooltipTriggerEl)
         });
-    </script>
+    </script>   
