@@ -36,4 +36,31 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_GET['id'])) {
     header("Location: ../../vistas/generador/listado_generadores_view.php");
     exit();
 }
+// NUEVA FUNCIÓN: Actualizar estado en revisiones_anuales
+function actualizarEstadoRevisionAnual($conn, $generador_id, $anio) {
+    // Verificar si existe registro en revisiones_anuales
+    $stmt_check = $conn->prepare("SELECT formulario_mensual, formulario_contingencias FROM revisiones_anuales WHERE generador_id = ? AND anio = ?");
+    $stmt_check->execute([$generador_id, $anio]);
+    $revision_existente = $stmt_check->fetch(PDO::FETCH_ASSOC);
+    
+    if ($revision_existente) {
+        // Si el formulario mensual estaba rechazado, cambiar a pendiente
+        $nuevo_estado_mensual = ($revision_existente['formulario_mensual'] == 'rechazado') ? 'pendiente' : 'pendiente';
+        
+        // Mantener el estado actual de contingencias
+        $estado_contingencias = $revision_existente['formulario_contingencias'];
+        
+        // Actualizar registro
+        $stmt_update = $conn->prepare("UPDATE revisiones_anuales SET 
+            formulario_mensual = ?,
+            formulario_contingencias = ?,
+            observaciones_mensual = NULL,
+            fecha_revision = NULL,
+            revisado_por = NULL,
+            estado_general = 'pendiente'
+            WHERE generador_id = ? AND anio = ?");
+        
+        $stmt_update->execute([$nuevo_estado_mensual, $estado_contingencias, $generador_id, $anio]);
+    }
+}
 ?>

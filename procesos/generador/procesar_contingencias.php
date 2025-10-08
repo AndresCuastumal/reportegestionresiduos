@@ -49,9 +49,6 @@ try {
         $agua_otra_accion = $existente['agua_otra_accion'] ?? '';
     }
     
-    // Aplicar la misma lógica para los demás campos "otra"...
-    // (deberías agregar el código similar para energia, derrames, recoleccion, operativas)
-    
     // Limpiar campos "otra" si no se seleccionó la opción correspondiente
     if (!in_array('otro', $incendios_acciones)) $incendios_otra_accion = '';
     if (!in_array('otro', $agua_acciones)) $agua_otra_accion = '';
@@ -68,7 +65,7 @@ try {
     $recoleccion_acciones_json = !empty($recoleccion_acciones) ? json_encode($recoleccion_acciones) : '[]';
     $operativas_acciones_json = !empty($operativas_acciones) ? json_encode($operativas_acciones) : '[]';
     
-    // Determinar el estado según la acción
+    // ===== LÓGICA SIMPLIFICADA PARA EL ESTADO =====
     $estado = ($accion == 'confirmar') ? 'confirmado' : 'borrador';
     
     // Iniciar transacción para asegurar consistencia entre ambas tablas
@@ -81,9 +78,18 @@ try {
         $existe_registro = $stmt_check->fetch(PDO::FETCH_ASSOC);
         
         if ($existe_registro) {
-            // Si ya está confirmado, no permitir cambios
+            // Si ya está confirmado, verificar si fue rechazado para permitir cambios
             if ($existe_registro['estado'] == 'confirmado') {
-                throw new Exception("Este reporte ya ha sido confirmado y no puede ser modificado.");
+                // Verificar si el formulario fue rechazado (permite reenvío después de rechazo)
+                $stmt_check_rechazo = $conn->prepare("SELECT formulario_contingencias FROM revisiones_anuales WHERE generador_id = ? AND anio = ?");
+                $stmt_check_rechazo->execute([$generador_id, $anio]);
+                $rechazo_existente = $stmt_check_rechazo->fetch(PDO::FETCH_ASSOC);
+                
+                // Solo bloquear si NO hay rechazo previo
+                if (!$rechazo_existente || $rechazo_existente['formulario_contingencias'] != 'rechazado') {
+                    throw new Exception("Este reporte ya ha sido confirmado y no puede ser modificado.");
+                }
+                // Si hay rechazo previo, permitir la modificación
             }
             
             // Actualizar registro existente
@@ -170,30 +176,26 @@ try {
             ]);
         }
         
-        // ACTUALIZAR ESTADO EN REVISIONES_ANUALES - NUEVO CÓDIGO
-        // Verificar si existe registro en revisiones_anuales
-        $stmt_check_revision = $conn->prepare("SELECT generador_id FROM revisiones_anuales WHERE generador_id = ? AND anio = ?");
-        $stmt_check_revision->execute([$generador_id, $anio]);
-        $existe_revision = $stmt_check_revision->fetch(PDO::FETCH_ASSOC);
-        
-        if ($existe_revision) {
-            // Actualizar estado del formulario de contingencias a "pendiente"
-            $stmt_update = $conn->prepare("UPDATE revisiones_anuales SET 
-                formulario_contingencias = 'pendiente',
-                fecha_revision = NULL,
-                revisado_por = NULL,
-                observaciones_contingencias = NULL
-                WHERE generador_id = ? AND anio = ?");
+        // ===== ACTUALIZAR REVISIONES_ANUALES - SOLUCIÓN MEJORADA =====
+        // Primero obtener el estado actual del formulario_mensual
+        $stmt_check_mensual = $conn->prepare("SELECT formulario_mensual FROM revisiones_anuales WHERE generador_id = ? AND anio = ?");
+        $stmt_check_mensual->execute([$generador_id, $anio]);
+        $estado_mensual_actual = $stmt_check_mensual->fetch(PDO::FETCH_COLUMN);
+
+        // Si no existe el registro o el estado es nulo, usar 'pendiente' como valor por defecto
+        $nuevo_estado_mensual = $estado_mensual_actual ? $estado_mensual_actual : 'pendiente';
+
+        // SOLO ACTUALIZAR - preservar el estado del formulario_mensual
+        $stmt_update = $conn->prepare("UPDATE revisiones_anuales SET 
+            formulario_contingencias = 'pendiente',
+            formulario_mensual = ?,
+            estado_general = 'pendiente',
+            fecha_revision = NULL,
+            revisado_por = NULL,
+            observaciones_contingencias = NULL
+            WHERE generador_id = ? AND anio = ?");
             
-            $stmt_update->execute([$generador_id, $anio]);
-        } else {
-            // Insertar nuevo registro en revisiones_anuales
-            $stmt_insert = $conn->prepare("INSERT INTO revisiones_anuales 
-                (generador_id, anio, formulario_contingencias, estado_general)
-                VALUES (?, ?, 'pendiente', 'incompleto')");
-            
-            $stmt_insert->execute([$generador_id, $anio]);
-        }
+        $stmt_update->execute([$nuevo_estado_mensual, $generador_id, $anio]);
         
         // Confirmar transacción
         $conn->commit();

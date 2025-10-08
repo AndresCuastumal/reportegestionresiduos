@@ -145,41 +145,30 @@ class ReporteMensualController {
         return $nombre_archivo;
     }
     
-    // ===== MÉTODO: ACTUALIZAR REVISIÓN ANUAL =====
     private function actualizarRevisionAnual($generador_id, $anio, $nombre_archivo) {
-        // Verificar si ya existe una revisión
-        $stmt_check = $this->conn->prepare("SELECT soporte_pdf FROM revisiones_anuales 
-                                        WHERE generador_id = ? AND anio = ?");
-        $stmt_check->execute([$generador_id, $anio]);
-        $revision_existente = $stmt_check->fetch(PDO::FETCH_ASSOC);
-        
-        if ($revision_existente) {
-            // Actualizar registro existente
-            if ($nombre_archivo !== null) {
-                $stmt = $this->conn->prepare("UPDATE revisiones_anuales 
-                                        SET soporte_pdf = ?, estado_general = 'pendiente',
-                                            observaciones_mensual = NULL, observaciones_contingencias = NULL,
-                                            observaciones_accidentes = NULL, fecha_revision = NULL,
-                                            revisado_por = NULL
-                                        WHERE generador_id = ? AND anio = ?");
-                $stmt->execute([$nombre_archivo, $generador_id, $anio]);
-            } else {
-                // Si no hay nuevo archivo, mantener el existente y solo actualizar estado
-                $stmt = $this->conn->prepare("UPDATE revisiones_anuales 
-                                        SET estado_general = 'pendiente',
-                                            observaciones_mensual = NULL, observaciones_contingencias = NULL,
-                                            observaciones_accidentes = NULL, fecha_revision = NULL,
-                                            revisado_por = NULL
-                                        WHERE generador_id = ? AND anio = ?");
-                $stmt->execute([$generador_id, $anio]);
-            }
+        // SOLO ACTUALIZAR - si no existe, no pasa nada
+        if ($nombre_archivo !== null) {
+            $stmt = $this->conn->prepare("UPDATE revisiones_anuales 
+                                SET soporte_pdf = ?, 
+                                    formulario_mensual = 'pendiente',
+                                    observaciones_mensual = NULL,
+                                    fecha_revision = NULL,
+                                    revisado_por = NULL,
+                                    estado_general = 'pendiente'
+                                WHERE generador_id = ? AND anio = ?");
+            $stmt->execute([$nombre_archivo, $generador_id, $anio]);
         } else {
-            // Insertar nuevo registro
-            $stmt = $this->conn->prepare("INSERT INTO revisiones_anuales 
-                                    (generador_id, anio, formulario_mensual, soporte_pdf) 
-                                    VALUES (?, ?, 'pendiente', ?)");
-            $stmt->execute([$generador_id, $anio, $nombre_archivo]);
+            $stmt = $this->conn->prepare("UPDATE revisiones_anuales 
+                                SET formulario_mensual = 'pendiente',
+                                    observaciones_mensual = NULL,
+                                    fecha_revision = NULL,
+                                    revisado_por = NULL,
+                                    estado_general = 'pendiente'
+                                WHERE generador_id = ? AND anio = ?");
+            $stmt->execute([$generador_id, $anio]);
         }
+        
+        // Si no existe el registro, se creará cuando el usuario confirme todo
     }
     
     private function actualizarCategoriaGenerador($generador_id, $anio) {

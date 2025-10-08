@@ -147,12 +147,11 @@ if(isset($contingencia) && is_array($contingencia) && isset($contingencia['estad
             Puede modificar los campos que necesite y guardar los cambios.
         </div>
         
-
         <!-- Tarjeta informativa -->
         <div class="card mb-4" style="background-color: #f8f4ceff;">
             <div class="card-body">
                 <p class="card-text" style="text-align: justify; text-justify: inter-word;">
-                    Complete el reporte mensual de residuos peligrosos generados durante el año <?= $anio_actual ?>.
+                    Complete el reporte mensual de residuos en atención en salud y otras activides generados durante el año <?= $anio_actual ?>.
                     Ingrese la cantidad en kilogramos (kg) para cada mes y adjunte el soporte documental correspondiente.
                 </p>
                 <p class="mb-0"><strong>Establecimiento:</strong> <?= htmlspecialchars($generador['nom_generador']) ?></p>
@@ -209,7 +208,7 @@ if(isset($contingencia) && is_array($contingencia) && isset($contingencia['estad
         
         <div class="card">
             <div class="card-header bg-light d-flex justify-content-between align-items-center">
-                <h5 class="mb-0"><i class="bi bi-clipboard-data me-2"></i>Reporte Mensual <?= $anio_actual ?></h5>
+                <h5 class="mb-0"><i class="bi bi-clipboard-data me-2"></i>Reporte año <?= $anio_actual ?></h5>
                 <!-- ✅ NUEVO: Badge de estado -->
                 <span class="badge 
                     <?= $estado_formulario_mensual === 'aprobado' ? 'bg-success' : '' ?>
@@ -238,14 +237,12 @@ if(isset($contingencia) && is_array($contingencia) && isset($contingencia['estad
                 <form method="POST" enctype="multipart/form-data" action="../../procesos/generador/procesar_reporte_mensual.php?id=<?= $generador_id ?>">
                     <input type="hidden" name="anio" value="<?= $anio_actual ?>">
                     
-                    <div class="mb-3">
-                        <label class="form-label">Año de reporte:</label>
-                        <input type="number" class="form-control" value="<?= $anio_actual ?>" disabled>
+                    <div class="mb-3">                        
                         <div class="form-text">Sistema de reporte anual según Resolución 591 de 2024</div>
                     </div>
                     
                     <!-- Datos del reporte mensual -->
-                    <h6 class="text-muted mb-3">Cantidad de residuos peligrosos por mes (kg)</h6>
+                    <h6 class="text-muted mb-3">Cantidad de residuos generados en atención en salud y otras actividades por mes (kg)</h6>
                     <div class="meses-grid">
                         <?php
                         $meses = [

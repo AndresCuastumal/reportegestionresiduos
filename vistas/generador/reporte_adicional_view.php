@@ -126,8 +126,7 @@ if (!$reporte_bloqueado) {
             <strong>El reporte anual para el año <?= $anio_actual ?> ya fue enviado y está en proceso de revisión.</strong>
             No puede realizar modificaciones adicionales.
         </div>    
-    <?php endif; ?>
-    ?>
+    <?php endif; ?>    
     <!-- Contenedor principal -->
     <div class="container my-4">
         <!-- Breadcrumb -->
@@ -380,20 +379,23 @@ if (!$reporte_bloqueado) {
                                 </div>
                                 <div class="form-check mb-2">
                                     <input class="form-check-input" type="checkbox" 
-                                           name="acciones_preventivas[]" 
-                                           value="otra" id="accion_otra"
-                                           <?= (in_array('otra', $acciones_preventivas) || !empty($info_adicional['otra_accion_preventiva'])) ? 'checked' : '' ?> <?= $disabled ?>
-                                            <?= !$modo_edicion ? 'onclick="return false;"' : '' ?>>
+                                        name="acciones_preventivas[]" 
+                                        value="otra" id="accion_otra"
+                                        <?= (in_array('otra', $acciones_preventivas) || !empty($info_adicional['otra_accion_preventiva'])) ? 'checked' : '' ?> 
+                                        <?= $disabled ?>
+                                        <?= !$modo_edicion ? 'onclick="return false;"' : '' ?>>
                                     <label class="form-check-label" for="accion_otra">
                                         Otra
                                     </label>
                                 </div>
                                 <div class="mt-2" id="otra_accion_container" style="display: <?= (!empty($info_adicional['otra_accion_preventiva']) || (isset($acciones_preventivas) && in_array('otra', $acciones_preventivas))) ? 'block' : 'none' ?>;">
-                                <input type="number" class="form-control <?= !$modo_edicion ? 'bg-light' : '' ?>" 
-                                    name="otra_accion_preventiva" 
-                                    placeholder="Especifique cuál"
-                                    value="<?= $info_adicional['otra_accion_preventiva'] ?? '' ?>" <?= $readonly ?>
-                                    <?= !$modo_edicion ? 'style="background-color: #f8f9fa; border-color: #dee2e6;"' : '' ?>>
+                                    <!-- ✅ CORRECCIÓN: Cambiar a type="text" y usar $disabled en lugar de $readonly -->
+                                    <input type="text" class="form-control <?= !$modo_edicion ? 'bg-light' : '' ?>" 
+                                        name="otra_accion_preventiva" 
+                                        placeholder="Especifique cuál"
+                                        value="<?= $info_adicional['otra_accion_preventiva'] ?? '' ?>" 
+                                        <?= $disabled ?>
+                                        <?= !$modo_edicion ? 'style="background-color: #f8f9fa; border-color: #dee2e6;"' : '' ?>>
                                 </div>
                             </div>
                         </div>
