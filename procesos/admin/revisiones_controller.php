@@ -351,17 +351,21 @@ class RevisionesController {
     }
 
     // Método para verificar si un formulario tiene datos
-    public function formularioTieneDatos($generador_id, $anio, $tipo_formulario) {
+        public function formularioTieneDatos($generador_id, $anio, $tipo_formulario) {
         switch ($tipo_formulario) {
             case 'mensual':
-                $tabla = 'cantidad_x_mes';
+                // ✅ NUEVA LÓGICA: Verificar si existe el soporte_pdf en revisiones_anuales
                 $stmt = $this->conn->prepare("
-                    SELECT COUNT(*) as total 
-                    FROM $tabla 
-                    WHERE id_generador = ? AND anio = ?
+                    SELECT soporte_pdf 
+                    FROM revisiones_anuales 
+                    WHERE generador_id = ? AND anio = ?
                 ");
-                break;
+                $stmt->execute([$generador_id, $anio]);
+                $resultado = $stmt->fetch(PDO::FETCH_ASSOC);
                 
+                // Si existe soporte_pdf, el formulario está diligenciado
+                return ($resultado && !empty($resultado['soporte_pdf']));
+                    
             case 'accidentes':
                 // Verificar si existe al menos un registro en reporte_anual_adicional
                 $stmt = $this->conn->prepare("
@@ -369,26 +373,26 @@ class RevisionesController {
                     FROM reporte_anual_adicional 
                     WHERE generador_id = ? AND anio = ?
                 ");
-                break;
+                $stmt->execute([$generador_id, $anio]);
+                $resultado = $stmt->fetch(PDO::FETCH_ASSOC);
                 
+                return $resultado['total'] > 0;
+                    
             case 'contingencias':
                 // Verificar si existe al menos un registro en la tabla de contingencias
-                // Ajusta el nombre de la tabla si es diferente
                 $stmt = $this->conn->prepare("
                     SELECT COUNT(*) as total 
                     FROM contingencias 
                     WHERE generador_id = ? AND anio = ?
                 ");
-                break;
+                $stmt->execute([$generador_id, $anio]);
+                $resultado = $stmt->fetch(PDO::FETCH_ASSOC);
                 
+                return $resultado['total'] > 0;
+                    
             default:
                 return false;
         }
-        
-        $stmt->execute([$generador_id, $anio]);
-        $resultado = $stmt->fetch(PDO::FETCH_ASSOC);
-        
-        return $resultado['total'] > 0;
     }
 
     // Método para obtener el estado actual del formulario
@@ -652,7 +656,7 @@ class RevisionesController {
         
         // Si hay un PDF, agregar el campo soporte_pdf
         if ($nombre_pdf) {
-            $sql .= ", soporte_pdf = ?";
+            $sql .= ", certificado_pdf = ?";
             $params = [$nombre_pdf, $generador_id, $anio];
         } else {
             $params = [$generador_id, $anio];

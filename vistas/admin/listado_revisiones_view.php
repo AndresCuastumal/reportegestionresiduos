@@ -219,21 +219,21 @@ include '../../includes/header.php';
                             <td>
                                 <div class="d-flex flex-column gap-2">
                                     <!-- Botón para Reporte Mensual -->
-                                    <a href="revisar_formulario_mensual.php?generador_id=<?= $revision['generador_id'] ?>&anio=<?= $revision['anio'] ?>" 
+                                    <a href="revisar_formulario_mensual.php?generador_id=<?= $revision['generador_id'] ?>&anio=<?= $revision['anio'] ?>&<?= http_build_query(['tipo_sujeto' => $filtro_tipo, 'estado_general' => $filtro_estado, 'pagina' => $pagina_actual]) ?>" 
                                     class="btn-formulario btn-formulario-mensual" title="Revisar Reporte Mensual">
                                         <i class="bi bi-clipboard-data me-1"></i>
                                         Reporte Mensual: <span class="fw-semibold"><?= ucfirst(obtenerTextoEstado($revision['formulario_mensual'])) ?></span>
                                     </a>
                                     
                                     <!-- Botón para Capacitaciones, Accidentes y Auditorías -->
-                                    <a href="revisar_formulario_accidentes.php?generador_id=<?= $revision['generador_id'] ?>&anio=<?= $revision['anio'] ?>" 
+                                    <a href="revisar_formulario_accidentes.php?generador_id=<?= $revision['generador_id'] ?>&anio=<?= $revision['anio'] ?>&<?= http_build_query(['tipo_sujeto' => $filtro_tipo, 'estado_general' => $filtro_estado, 'pagina' => $pagina_actual]) ?>" 
                                     class="btn-formulario btn-formulario-accidentes" title="Revisar Capacitaciones y Accidentes">
                                         <i class="bi bi-exclamation-triangle me-1"></i>
                                         Capacitaciones y Accidentes: <span class="fw-semibold"><?= ucfirst(obtenerTextoEstado($revision['formulario_accidentes'])) ?></span>
                                     </a>
                                     
                                     <!-- Botón para Plan de Contingencias -->
-                                    <a href="revisar_formulario_contingencias.php?generador_id=<?= $revision['generador_id'] ?>&anio=<?= $revision['anio'] ?>" 
+                                    <a href="revisar_formulario_contingencias.php?generador_id=<?= $revision['generador_id'] ?>&anio=<?= $revision['anio'] ?>&<?= http_build_query(['tipo_sujeto' => $filtro_tipo, 'estado_general' => $filtro_estado, 'pagina' => $pagina_actual]) ?>" 
                                     class="btn-formulario btn-formulario-contingencias" title="Revisar Plan de Contingencias">
                                         <i class="bi bi-shield-exclamation me-1"></i>
                                         Plan de Contingencias: <span class="fw-semibold"><?= ucfirst(obtenerTextoEstado($revision['formulario_contingencias'])) ?></span>

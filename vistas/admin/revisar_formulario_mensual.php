@@ -234,8 +234,12 @@ include '../../includes/header.php';
                                 </div>
 
                                 <div class="d-flex justify-content-between">
-                                    <a href="listado_revisiones_view.php" class="btn btn-outline-secondary">
-                                        <i class="bi bi-arrow-left me-2"></i>Volver
+                                    <a href="listado_revisiones_view.php?<?= http_build_query([
+                                        'tipo_sujeto' => $_GET['tipo_sujeto'] ?? '',
+                                        'estado_general' => $_GET['estado_general'] ?? '',
+                                        'pagina' => $_GET['pagina'] ?? 1
+                                    ]) ?>" class="btn btn-outline-secondary">
+                                        <i class="bi bi-arrow-left me-2"></i>Volver a la lista
                                     </a>
                                     <button type="submit" class="btn btn-success">
                                         <i class="bi bi-check-circle me-2"></i>Guardar Revisión

@@ -168,6 +168,26 @@ class GeneradoresController {
             return null;
         }
     }
+
+        public function obtenerCertificadoPdf($generador_id) {
+        try {
+            $anio_actual = date('Y', strtotime('-1 year')); // Año anterior
+            
+            $stmt = $this->conn->prepare("
+                SELECT certificado_pdf 
+                FROM revisiones_anuales 
+                WHERE generador_id = ? AND anio = ?
+            ");
+            $stmt->execute([$generador_id, $anio_actual]);
+            $resultado = $stmt->fetch(PDO::FETCH_ASSOC);
+            
+            return $resultado['certificado_pdf'] ?? null;
+            
+        } catch (PDOException $e) {
+            error_log("Error al obtener certificado PDF: " . $e->getMessage());
+            return null;
+        }
+    }
 }
 
 // Uso del controlador

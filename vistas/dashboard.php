@@ -71,7 +71,7 @@ include '../includes/header.php'; // Incluye el encabezado HTML
                         <h5 class="card-title">Certificados</h5>
                         <p class="card-text">Descargue certificados oficiales una vez sus reportes sean aprobados.</p>
                         <?php if (in_array($rol, ['generador'])): ?>
-                            <a href="certificados.php" class="btn btn-sm btn-outline-danger mt-2">Descargar</a>
+                            <a href="generador/certificados.php" class="btn btn-sm btn-outline-danger mt-2">Descargar</a>
                         <?php endif; ?>
                     </div>
                 </div>

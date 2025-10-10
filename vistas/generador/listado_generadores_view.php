@@ -213,4 +213,4 @@ include '../../includes/header.php'; // Incluye el encabezado HTML
         var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
             return new bootstrap.Tooltip(tooltipTriggerEl)
         });
-    </script>   
+    </script>

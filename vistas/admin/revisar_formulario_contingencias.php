@@ -4,6 +4,19 @@ require_once '../../procesos/admin/revisiones_controller.php';
 require_once '../../procesos/admin/reporte_contingencias_controller.php';
 require_once '../../procesos/admin/reporte_mensual_controller.php';
 
+
+// Función para construir URL con filtros
+function construirUrlConFiltros($baseUrl, $paramsAdicionales = []) {
+    $filtros = [
+        'tipo_sujeto' => $_GET['tipo_sujeto'] ?? '',
+        'estado_general' => $_GET['estado_general'] ?? '',
+        'pagina' => $_GET['pagina'] ?? 1
+    ];
+    
+    $todosParams = array_merge($filtros, $paramsAdicionales);
+    return $baseUrl . '?' . http_build_query($todosParams);
+}
+
 // Verificar sesión y permisos de admin
 session_start();
 if (!isset($_SESSION['usuario_id']) || $_SESSION['usuario_rol'] !== 'admin') {
@@ -419,8 +432,12 @@ include '../../includes/header.php';
                                         class="btn btn-outline-primary me-2">
                                             <i class="bi bi-skip-backward me-2"></i>Volver a Accidentes
                                         </a>
-                                        <a href="listado_revisiones_view.php" class="btn btn-outline-secondary">
-                                            <i class="bi bi-arrow-left me-2"></i>Volver al Listado
+                                        <a href="listado_revisiones_view.php?<?= http_build_query([
+                                            'tipo_sujeto' => $_GET['tipo_sujeto'] ?? '',
+                                            'estado_general' => $_GET['estado_general'] ?? '',
+                                            'pagina' => $_GET['pagina'] ?? 1
+                                        ]) ?>" class="btn btn-outline-secondary">
+                                            <i class="bi bi-arrow-left me-2"></i>Volver a la lista
                                         </a>
                                     </div>
                                     
