@@ -19,7 +19,7 @@ include '../includes/header.php'; // Incluye el encabezado HTML
             <div class="hero-content  p-4 " style="background-color: #f8f4ceff;">
                 <p class="lead mt-1" style="text-align: justify; text-justify: inter-word;">
                     Plataforma de reporte según Resolución 591 de 2024. De acuerdo con la normatividad vigente, 
-                    todos los establecimietos que generen residuos por la atención en salud deben reportar anualmente información relacionada con 
+                    todos los estableciminetos que generen residuos por la atención en salud y otras actividades deben reportar anualmente información relacionada con 
                     la gestión de los mismos. Para ello se deben diligenciar tres formularios:
                 </p>
                 <ul class="list-group list-group-flush mt-4">
@@ -43,7 +43,7 @@ include '../includes/header.php'; // Incluye el encabezado HTML
                     <div class="card-body text-center">
                         <i class="bi bi-calendar-check text-primary fs-1"></i>
                         <h5 class="card-title">Reporte Año <?= date('Y', strtotime('-1 year') ) ?></h5>
-                        <p class="card-text">Módulo para reportar información relacionada con gestión de residuos peligrosos para el año <?= date('Y', strtotime('-1 year') ) ?>.</p>
+                        <p class="card-text">Módulo para reportar información relacionada con gestión de residuos generados en atención en salud y otras activiades para el año <?= date('Y', strtotime('-1 year') ) ?>.</p>
                         <?php if (in_array($rol, ['generador'])): ?>
                             <a href="generador/reporte_mensual_view.php" class="btn btn-sm btn-outline-primary mt-2">Acceder</a>
                         <?php endif; ?>
