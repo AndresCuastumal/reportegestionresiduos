@@ -50,13 +50,13 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                     <input type="email" id="email" name="email" required placeholder="tu@email.com">
                 </div>
                 
-                <div class="form-group mb-3">
+                <div class="form-group mb-5">
                     <label for="password">Contraseña</label>
                     <input type="password" id="password" name="password" required placeholder="••••••••">
                 </div>
                 
                 <div class="form-actions d-flex flex-column align-items-center">
-                    <button type="submit" class="btn btn-login">Ingresar</button>
+                    <button type="submit" class="btn btn-primary">Ingresar</button>
                     <div class="text-center">
                         <a href="recuperar.php" class="auth-link">¿Olvidaste tu contraseña?</a>
                     </div>

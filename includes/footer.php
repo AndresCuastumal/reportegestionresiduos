@@ -3,11 +3,7 @@
             <div class="footer-content">
                 <p>Secretaría Municipal de Salud - Alcaldía de Pasto &copy; <?php echo date('Y'); ?> Todos los derechos reservados</p>
                 
-                <nav class="footer-nav">
-                    <a href="../vistas/terminos.php">Términos de Servicio</a> |
-                    <a href="../vistas/privacidad.php">Política de Privacidad</a> |
-                    <a href="../vistas/contacto.php">Contacto</a>
-                </nav>
+                
                 
                 <p class="version">Versión 1.0.0</p>
             </div>

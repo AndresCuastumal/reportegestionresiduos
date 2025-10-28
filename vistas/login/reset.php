@@ -53,39 +53,43 @@ if (isset($_GET['token'])) {
 ?>
 
 <main class="auth-container">
-    <div class="auth-card">
-        <h2 class="auth-title">Restablecer Contraseña</h2>
-        
-        <div class="email-info">
-            <p>Estás restableciendo la contraseña para: <?php echo htmlspecialchars($user['email']); ?></p>
+    <div class="d-flex flex-column align-items-center">
+        <div class="auth-card shadow p-4 mb-5 mt-5">
+            <h2 class="auth-title text-center">Restablecer Contraseña</h2>
+            
+            <div class="mb-4 text-center email-info">
+                <p>Estás restableciendo la contraseña para: </p><p class="text-success"> <?php echo htmlspecialchars($user['email']); ?></p>
+            </div>
+            
+            <?php if (!empty($errors)): ?>
+                <div class="alert alert-error">
+                    <?php foreach ($errors as $error): ?>
+                        <p><?php echo $error; ?></p>
+                    <?php endforeach; ?>
+                </div>
+            <?php endif; ?>
+            
+            <form method="post" id="resetForm" onsubmit="return validarFormulario()">
+                <div class="form-group mb-3">
+                    <label for="password">Nueva Contraseña (mínimo 6 caracteres):</label>
+                    <input type="password" id="password" name="password" required minlength="6" placeholder="••••••••">
+                    <small class="form-text">Mínimo 6 caracteres</small>
+                </div>
+                
+                <div class="form-group mb-5">
+                    <label for="confirm_password">Confirmar Nueva Contraseña:</label>
+                    <input type="password" id="confirm_password" name="confirm_password" required placeholder="••••••••">
+                    <small id="passwordError" class="text-error"></small>
+                </div>
+                
+                <div class="form-actions d-flex flex-column align-items-center mb-3">
+                    <button type="submit" class="btn btn-primary btn-block">Guardar nueva contraseña</button>
+                </div>    
+                <div class="text-center mt-3">
+                    <a href="login.php" class="auth-link text-center">Volver al inicio de sesión</a>
+                </div>
+            </form>
         </div>
-        
-        <?php if (!empty($errors)): ?>
-            <div class="alert alert-error">
-                <?php foreach ($errors as $error): ?>
-                    <p><?php echo $error; ?></p>
-                <?php endforeach; ?>
-            </div>
-        <?php endif; ?>
-        
-        <form method="post" id="resetForm" onsubmit="return validarFormulario()">
-            <div class="form-group">
-                <label for="password">Nueva Contraseña (mínimo 6 caracteres):</label>
-                <input type="password" id="password" name="password" required minlength="6" placeholder="••••••••">
-                <small class="form-text">Mínimo 6 caracteres</small>
-            </div>
-            
-            <div class="form-group">
-                <label for="confirm_password">Confirmar Nueva Contraseña:</label>
-                <input type="password" id="confirm_password" name="confirm_password" required placeholder="••••••••">
-                <small id="passwordError" class="text-error"></small>
-            </div>
-            
-            <div class="form-actions">
-                <button type="submit" class="btn btn-primary btn-block">Guardar nueva contraseña</button>
-                <a href="login.php" class="auth-link text-center">Volver al inicio de sesión</a>
-            </div>
-        </form>
     </div>
 </main>
 

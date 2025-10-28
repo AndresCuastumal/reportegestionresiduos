@@ -124,8 +124,7 @@ class CertificadoPdfController {
                     color: #333;
                     line-height: 1.4;
                 }
-                .certificado {
-                    border: 3px solid #4caf4f;
+                .certificado {                    
                     padding: 40px;
                     text-align: center;
                 }
@@ -207,19 +206,13 @@ class CertificadoPdfController {
                     revisados y aprobados por el administrador del sistema.</p>
                 </div>
                 
-                <div class='firma'>
-                    <p>Fecha de Revisión: <strong>$fecha_revision</strong></p>
-                    <p>Fecha de Emisión: <strong>$fecha_actual</strong></p>
+                <div class='firma'>                    
                     <br>
                     <p>_________________________</p>
                     <p><strong>Sistema de Gestión de Residuos Generados en Atención en Salud y Otras Actividades</strong></p>
                     <p><em>Certificado generado automáticamente</em></p>
-                </div>
-                
-                <div class='sello'>
-                    <p>● CERTIFICADO VÁLIDO ●</p>
-                    
-                </div>
+                </div>              
+               
             </div>
         </body>
         </html>

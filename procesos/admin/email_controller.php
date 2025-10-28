@@ -262,9 +262,8 @@ class EmailController {
                 
                 <div class='footer'>
                     <p><strong>Secretaría de Salud de Pasto</strong><br>
-                    Sistema de Gestión de Residuos Peligrosos</p>
-                    <p>📍 Pasto, Nariño, Colombia<br>
-                    📞 Contacto: +57 XXX XXX XXXX<br>
+                    Sistema de Reporte de Gestión de Residuos Generados en Atención en Salud y Otras Actividades</p>
+                    <p>📍 Pasto, Nariño, Colombia<br>                    
                     ✉️ reportegestionresiduos@gmail.com</p>
                     <p><em>Este es un mensaje automático, por favor no responda a este correo.</em></p>
                 </div>
@@ -377,14 +376,13 @@ class EmailController {
                     
                     <p><strong>📋 Acciones Requeridas:</strong></p>
                     <ol>
-                        <li>Ingrese al sistema de gestión de residuos</li>
-                        <li>Revise las observaciones detalladas anteriormente</li>
-                        <li>Realice las correcciones necesarias en los formularios correspondientes</li>
-                        <li>Vuelva a enviar el reporte para una nueva revisión</li>
+                        <li>Ingrese al sistema</li>
+                        <li>Realice las correcciones necesarias en los formularios correspondientes de acuerdo con las revisiones planteadas por el revisor enviadas por este correo</li>
+                        <li>Vuelva a enviar el reporte para una segunda y última oportunidad para revisión</li>
                     </ol>
                     
                     <p style='text-align: center;'>
-                        <a href='http://localhost/reportegestionresiduos' class='btn'>
+                        <a href='http://192.168.20.122/reportegestionresiduos' class='btn'>
                             📊 Ingresar al Sistema
                         </a>
                     </p>
@@ -392,8 +390,7 @@ class EmailController {
                 
                 <div class='footer'>
                     <p><strong>Secretaría de Salud de Pasto</strong><br>
-                    Sistema de Gestión de Residuos Peligrosos</p>
-                    <p>Para asistencia técnica, contacte al administrador del sistema.</p>
+                    Sistema de Gestión de Residuos Generados e Ateción en Salud  y Otras Actividades</p>                    
                     <p><em>Este es un mensaje automático, por favor no responda a este correo.</em></p>
                 </div>
             </div>
@@ -447,11 +444,11 @@ ACCIONES REQUERIDAS:
 3. Realice las correcciones necesarias
 4. Vuelva a enviar el reporte
 
-Enlace al sistema: http://localhost/reportegestionresiduos
+Enlace al sistema: http://192.168.20.122/reportegestionresiduos
 
 Secretaría de Salud de Pasto
 Sistema de Gestión de Residuos Peligrosos
-Para asistencia técnica, contacte al administrador del sistema.";
+Este es un mensaje automático, por favor no responda.";
     }
     
     // Guardar registro del envío de email en la base de datos
